@@ -1,11 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { NewsItem } from '../types';
 import { Play, Heart, MessageSquare, Share2, Bookmark, CheckCircle2 } from 'lucide-react';
 
 interface NewsCardProps {
   news: NewsItem;
-  onSelectNews: (news: NewsItem) => void;
-  onPlayVoice: (news: NewsItem, e: React.MouseEvent) => void;
+  onSelectNews?: (news: NewsItem) => void;
+  onPlayVoice?: (news: NewsItem, e: React.MouseEvent) => void;
   isSaved?: boolean;
   onToggleSave?: (newsId: string, e: React.MouseEvent) => void;
   onShare?: (news: NewsItem, e: React.MouseEvent) => void;
@@ -19,10 +20,29 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   onToggleSave,
   onShare,
 }) => {
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    if (onSelectNews) {
+      onSelectNews(news);
+    } else {
+      navigate(`/news/${news.id}`);
+    }
+  };
+
+  const handleVoiceClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onPlayVoice) {
+      onPlayVoice(news, e);
+    } else {
+      navigate(`/voice/${news.id}`);
+    }
+  };
+
   return (
     <article
       id={`news-card-${news.id}`}
-      onClick={() => onSelectNews(news)}
+      onClick={handleCardClick}
       className="bg-white rounded-xl p-3 border border-neutral-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-[0.99]"
     >
       <div className="flex gap-3">
@@ -63,10 +83,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({
               <span>{news.timeAgo}</span>
             </div>
 
-            {/* Red '▶ వినండి' button matching mockup */}
+            {/* Red '▶ వినండి' button */}
             <button
               id={`card-play-btn-${news.id}`}
-              onClick={(e) => onPlayVoice(news, e)}
+              onClick={handleVoiceClick}
               className="flex items-center gap-1 bg-[#E41E26] text-white hover:bg-[#B71C1C] px-2.5 py-1 rounded-md text-[11px] font-bold shadow-xs active:scale-95 transition-transform flex-shrink-0"
             >
               <Play className="w-3 h-3 fill-white" />
@@ -92,7 +112,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         <div className="flex items-center gap-2">
           {onShare && (
             <button
-              onClick={(e) => onShare(news, e)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare(news, e);
+              }}
               className="p-1 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
               title="వాట్సాప్ లో పంపండి"
             >
@@ -101,7 +124,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({
           )}
           {onToggleSave && (
             <button
-              onClick={(e) => onToggleSave(news.id, e)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSave(news.id, e);
+              }}
               className={`p-1 rounded transition-colors ${
                 isSaved
                   ? 'text-[#E41E26] fill-[#E41E26]'

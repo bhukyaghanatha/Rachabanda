@@ -1,19 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { NewsItem } from '../types';
 import { voiceNewsService } from '../utils/audioPlayer';
-import { ArrowLeft, Play, Pause, Share2, Radio, Volume2 } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Share2, Radio, Volume2, Home } from 'lucide-react';
 
 interface VoicePlayerScreenProps {
-  news: NewsItem;
-  onBack: () => void;
-  onShare: (news: NewsItem, e?: React.MouseEvent) => void;
+  news?: NewsItem;
+  newsList?: NewsItem[];
+  onBack?: () => void;
+  onShare?: (news: NewsItem, e?: React.MouseEvent) => void;
 }
 
 export const VoicePlayerScreen: React.FC<VoicePlayerScreenProps> = ({
-  news,
+  news: directNews,
+  newsList = [],
   onBack,
   onShare,
 }) => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const news =
+    directNews ||
+    (id ? newsList.find((n) => n.id === id) : null) ||
+    newsList.find((n) => n.isBreaking) ||
+    newsList[0];
+
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
@@ -21,7 +33,23 @@ export const VoicePlayerScreen: React.FC<VoicePlayerScreenProps> = ({
     return () => {
       voiceNewsService.stop();
     };
-  }, [news.id]);
+  }, [news?.id]);
+
+  if (!news) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-6 text-center">
+        <h2 className="text-lg font-bold telugu-heading">
+          వాయిస్ వార్త కనుగొనబడలేదు
+        </h2>
+        <button
+          onClick={() => navigate('/')}
+          className="mt-4 px-4 py-2 bg-[#E41E26] text-white rounded-xl text-xs font-bold"
+        >
+          హోమ్‌కి వెళ్లండి
+        </button>
+      </div>
+    );
+  }
 
   const togglePlay = () => {
     if (isPlaying) {
@@ -40,16 +68,33 @@ export const VoicePlayerScreen: React.FC<VoicePlayerScreenProps> = ({
     }
   };
 
+  const handleBack = () => {
+    voiceNewsService.stop();
+    if (onBack) {
+      onBack();
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleShareClick = (e: React.MouseEvent) => {
+    if (onShare) {
+      onShare(news, e);
+    } else {
+      const shareText = `*రచ్చ బండ - VOICE*\n${news.title}\n${news.shortSummary}\n\n👉 వినండి: ${window.location.origin}/voice/${news.id}`;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(shareText);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white pb-20 flex flex-col justify-between select-none">
       {/* Top Header Bar */}
       <div className="p-4 flex items-center justify-between border-b border-neutral-800 bg-neutral-900/60 backdrop-blur-md">
         <button
           id="voice-player-back-btn"
-          onClick={() => {
-            voiceNewsService.stop();
-            onBack();
-          }}
+          onClick={handleBack}
           className="p-1.5 -ml-1.5 rounded-full hover:bg-neutral-800 text-neutral-300 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -62,7 +107,7 @@ export const VoicePlayerScreen: React.FC<VoicePlayerScreenProps> = ({
         </div>
         <button
           id="voice-player-share-btn"
-          onClick={(e) => onShare(news, e)}
+          onClick={handleShareClick}
           className="p-1.5 -mr-1.5 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
         >
           <Share2 className="w-5 h-5" />

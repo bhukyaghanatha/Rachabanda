@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { NewsItem } from '../types';
 import { BreakingNewsBanner } from './BreakingNewsBanner';
 import { CategoryGrid } from './CategoryGrid';
@@ -9,20 +10,21 @@ import { Filter, Sparkles, Volume2, PhoneCall, ChevronRight } from 'lucide-react
 interface HomeScreenProps {
   newsList: NewsItem[];
   breakingNews: NewsItem;
-  selectedCategoryId: string | null;
-  onSelectCategory: (catId: string | null) => void;
-  onSelectNews: (news: NewsItem) => void;
-  onPlayVoice: (news: NewsItem, e: React.MouseEvent) => void;
+  selectedCategoryId?: string | null;
+  onSelectCategory?: (catId: string | null) => void;
+  onSelectNews?: (news: NewsItem) => void;
+  onPlayVoice?: (news: NewsItem, e: React.MouseEvent) => void;
   savedNewsIds: string[];
   onToggleSave: (newsId: string, e: React.MouseEvent) => void;
   onShare: (news: NewsItem, e: React.MouseEvent) => void;
   onOpenFlipMode: () => void;
+  initialDistrict?: string;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   newsList,
   breakingNews,
-  selectedCategoryId,
+  selectedCategoryId: propCategoryId = null,
   onSelectCategory,
   onSelectNews,
   onPlayVoice,
@@ -30,15 +32,54 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onToggleSave,
   onShare,
   onOpenFlipMode,
+  initialDistrict,
 }) => {
-  const [selectedDistrict, setSelectedDistrict] = useState('అన్ని ప్రాంతాలు');
+  const { slug } = useParams<{ slug?: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // If on /category/:slug, derive category; if on /location/:slug, derive location
+  const isCategoryRoute = location.pathname.startsWith('/category');
+  const isLocationRoute = location.pathname.startsWith('/location');
+
+  const activeCategory = isCategoryRoute ? slug || null : propCategoryId;
+  const [selectedDistrict, setSelectedDistrict] = useState(
+    isLocationRoute && slug ? decodeURIComponent(slug) : initialDistrict || 'అన్ని ప్రాంతాలు'
+  );
+
+  useEffect(() => {
+    if (isLocationRoute && slug) {
+      setSelectedDistrict(decodeURIComponent(slug));
+    }
+  }, [slug, isLocationRoute]);
+
+  const handleCategoryClick = (catId: string | null) => {
+    if (onSelectCategory) {
+      onSelectCategory(catId);
+    }
+    if (catId) {
+      navigate(`/category/${catId}`);
+    } else {
+      navigate('/');
+    }
+  };
+
+  const handleDistrictClick = (dist: string) => {
+    setSelectedDistrict(dist);
+    if (dist === 'అన్ని ప్రాంతాలు') {
+      navigate(activeCategory ? `/category/${activeCategory}` : '/');
+    } else {
+      navigate(`/location/${encodeURIComponent(dist)}`);
+    }
+  };
 
   // Filter news items
   const filteredNews = newsList.filter((item) => {
-    const matchesCategory = selectedCategoryId
-      ? item.category.toLowerCase() === selectedCategoryId.toLowerCase() ||
-        (selectedCategoryId === 'khammam' && item.location.includes('ఖమ్మం')) ||
-        (selectedCategoryId === 'telangana' && (item.location.includes('తెలంగాణ') || item.category.includes('తెలంగాణ')))
+    const matchesCategory = activeCategory
+      ? item.category.toLowerCase() === activeCategory.toLowerCase() ||
+        (activeCategory === 'khammam' && item.location.includes('ఖమ్మం')) ||
+        (activeCategory === 'telangana' &&
+          (item.location.includes('తెలంగాణ') || item.category.includes('తెలంగాణ')))
       : true;
 
     const matchesDistrict =
@@ -54,8 +95,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* 1. Breaking News Card matching top of Screen 1 */}
       <BreakingNewsBanner
         news={breakingNews}
-        onSelectNews={onSelectNews}
-        onPlayVoice={onPlayVoice}
+        onSelectNews={onSelectNews ? onSelectNews : (n) => navigate(`/news/${n.id}`)}
+        onPlayVoice={onPlayVoice ? onPlayVoice : (n) => navigate(`/voice/${n.id}`)}
         onViewAllBreaking={onOpenFlipMode}
       />
 
@@ -70,7 +111,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           return (
             <button
               key={dist}
-              onClick={() => setSelectedDistrict(dist)}
+              onClick={() => handleDistrictClick(dist)}
               className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
                 isSelected
                   ? 'bg-[#E41E26] text-white shadow-xs'
@@ -85,15 +126,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 3. Category Quick Access Grid matching Screen 1 */}
       <CategoryGrid
-        selectedCategoryId={selectedCategoryId}
-        onSelectCategory={onSelectCategory}
+        selectedCategoryId={activeCategory}
+        onSelectCategory={handleCategoryClick}
       />
 
       {/* 4. Latest News Section Header ('తాజా వార్తలు' with 'మరిన్ని >') */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-base font-black text-neutral-900 telugu-heading">
-            తాజా వార్తలు
+            {activeCategory
+              ? `వార్తలు: ${activeCategory}`
+              : selectedDistrict !== 'అన్ని ప్రాంతాలు'
+              ? `${selectedDistrict} వార్తలు`
+              : 'తాజా వార్తలు'}
           </h2>
           <span className="bg-red-100 text-[#E41E26] text-[10px] font-black px-2 py-0.5 rounded-full">
             LIVE
@@ -120,8 +165,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <NewsCard
               key={news.id}
               news={news}
-              onSelectNews={onSelectNews}
-              onPlayVoice={onPlayVoice}
+              onSelectNews={onSelectNews ? onSelectNews : (n) => navigate(`/news/${n.id}`)}
+              onPlayVoice={onPlayVoice ? onPlayVoice : (n) => navigate(`/voice/${n.id}`)}
               isSaved={savedNewsIds.includes(news.id)}
               onToggleSave={onToggleSave}
               onShare={onShare}

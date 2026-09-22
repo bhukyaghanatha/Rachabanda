@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { NewsItem } from '../types';
 import {
   ArrowLeft,
@@ -11,36 +12,53 @@ import {
   Volume2,
   CheckCircle2,
   Sparkles,
+  Home,
 } from 'lucide-react';
 import { voiceNewsService } from '../utils/audioPlayer';
 
 interface NewsDetailScreenProps {
-  news: NewsItem;
-  onBack: () => void;
-  onOpenVoicePlayer: (news: NewsItem) => void;
-  onSelectRelatedNews: (news: NewsItem) => void;
-  relatedNews: NewsItem[];
+  news?: NewsItem;
+  newsList?: NewsItem[];
+  onBack?: () => void;
+  onOpenVoicePlayer?: (news: NewsItem) => void;
+  onSelectRelatedNews?: (news: NewsItem) => void;
+  relatedNews?: NewsItem[];
   isSaved?: boolean;
-  onToggleSave: (newsId: string) => void;
-  onOpenComments: (newsId: string) => void;
-  onShare: (news: NewsItem) => void;
+  onToggleSave?: (newsId: string) => void;
+  onOpenComments?: (newsId: string) => void;
+  onShare?: (news: NewsItem) => void;
 }
 
 export const NewsDetailScreen: React.FC<NewsDetailScreenProps> = ({
-  news,
+  news: directNews,
+  newsList = [],
   onBack,
   onOpenVoicePlayer,
   onSelectRelatedNews,
-  relatedNews,
+  relatedNews: directRelatedNews,
   isSaved = false,
   onToggleSave,
   onOpenComments,
   onShare,
 }) => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const news = directNews || newsList.find((n) => n.id === id);
+  const relatedNews =
+    directRelatedNews || (news ? newsList.filter((n) => n.id !== news.id) : []);
+
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [likesCount, setLikesCount] = useState(news.likes);
+  const [likesCount, setLikesCount] = useState(news?.likes || 0);
   const [hasLiked, setHasLiked] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(0);
+
+  useEffect(() => {
+    if (news) {
+      setLikesCount(news.likes);
+      setHasLiked(false);
+    }
+  }, [news?.id]);
 
   useEffect(() => {
     // Scroll to top on news change
@@ -50,7 +68,7 @@ export const NewsDetailScreen: React.FC<NewsDetailScreenProps> = ({
     return () => {
       voiceNewsService.stop();
     };
-  }, [news.id]);
+  }, [news?.id]);
 
   // Audio timer simulation during speech
   useEffect(() => {
@@ -99,13 +117,51 @@ export const NewsDetailScreen: React.FC<NewsDetailScreenProps> = ({
     }
   };
 
+  if (!news) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+        <h2 className="text-lg font-bold text-neutral-900 telugu-heading">
+          వార్త కనుగొనబడలేదు (Article Not Found)
+        </h2>
+        <p className="text-xs text-neutral-500 mt-2">
+          మీరు కోరిన వార్త అందుబాటులో లేదు లేదా తొలగించబడి ఉండవచ్చు.
+        </p>
+        <button
+          onClick={() => navigate('/')}
+          className="mt-4 px-4 py-2 bg-[#E41E26] text-white rounded-xl text-xs font-bold shadow-md hover:bg-[#B71C1C] transition-all"
+        >
+          హోమ్‌కి వెళ్లండి
+        </button>
+      </div>
+    );
+  }
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleShareClick = () => {
+    if (onShare) {
+      onShare(news);
+    } else {
+      const shareText = `*రచ్చ బండ - VOICE*\n${news.title}\n${news.shortSummary}\n\n👉 ప్రజల మాటే... మా వార్త: ${window.location.origin}/news/${news.id}`;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(shareText);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white pb-16">
       {/* Top Bar matching Screen 2: Back button, 'వార్త వివరాలు', Share button */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-4 py-3 border-b border-neutral-100 flex items-center justify-between shadow-2xs">
         <button
           id="detail-back-btn"
-          onClick={onBack}
+          onClick={handleBack}
           className="p-1.5 -ml-1.5 text-neutral-800 hover:text-neutral-900 rounded-full hover:bg-neutral-100 active:scale-95 transition-all flex items-center gap-1 text-sm font-semibold"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -117,7 +173,7 @@ export const NewsDetailScreen: React.FC<NewsDetailScreenProps> = ({
 
         <button
           id="detail-share-top-btn"
-          onClick={() => onShare(news)}
+          onClick={handleShareClick}
           className="p-1.5 -mr-1.5 text-neutral-700 hover:text-[#E41E26] rounded-full hover:bg-neutral-100 transition-colors"
         >
           <Share2 className="w-5 h-5" />
@@ -186,7 +242,11 @@ export const NewsDetailScreen: React.FC<NewsDetailScreenProps> = ({
             </div>
 
             <button
-              onClick={() => onOpenVoicePlayer(news)}
+              onClick={() =>
+                onOpenVoicePlayer
+                  ? onOpenVoicePlayer(news)
+                  : navigate(`/voice/${news.id}`)
+              }
               className="text-[11px] font-bold text-[#E41E26] hover:underline flex items-center gap-1"
             >
               <span>స్టూడియో వ్యూ</span>
@@ -301,7 +361,11 @@ export const NewsDetailScreen: React.FC<NewsDetailScreenProps> = ({
             {relatedNews.slice(0, 3).map((item) => (
               <div
                 key={item.id}
-                onClick={() => onSelectRelatedNews(item)}
+                onClick={() =>
+                  onSelectRelatedNews
+                    ? onSelectRelatedNews(item)
+                    : navigate(`/news/${item.id}`)
+                }
                 className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50 transition-all cursor-pointer"
               >
                 <img

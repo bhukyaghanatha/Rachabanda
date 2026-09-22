@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Camera,
@@ -14,7 +15,7 @@ import { NewsSubmission } from '../types';
 import { DISTRICTS, CATEGORIES } from '../data/mockNews';
 
 interface SubmitNewsScreenProps {
-  onBack: () => void;
+  onBack?: () => void;
   onSubmitSuccess: (newSubmission: NewsSubmission) => void;
 }
 
@@ -22,6 +23,11 @@ export const SubmitNewsScreen: React.FC<SubmitNewsScreenProps> = ({
   onBack,
   onSubmitSuccess,
 }) => {
+  const navigate = useNavigate();
+  const handleBack = () => {
+    if (onBack) onBack();
+    else navigate(-1);
+  };
   const [headline, setHeadline] = useState('');
   const [details, setDetails] = useState('');
   const [location, setLocation] = useState('ఖమ్మం');
@@ -112,7 +118,7 @@ export const SubmitNewsScreen: React.FC<SubmitNewsScreenProps> = ({
             మరో వార్త పంపండి
           </button>
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="w-full py-2.5 bg-[#E41E26] hover:bg-[#B71C1C] text-white rounded-xl font-bold text-sm shadow-md transition-all"
           >
             హోమ్‌కి వెళ్లండి
@@ -128,7 +134,7 @@ export const SubmitNewsScreen: React.FC<SubmitNewsScreenProps> = ({
       <div className="sticky top-0 z-30 bg-[#E41E26] text-white px-4 py-3.5 flex items-center gap-3 shadow-md">
         <button
           id="submit-back-btn"
-          onClick={onBack}
+          onClick={handleBack}
           className="p-1 -ml-1 text-white hover:bg-white/10 rounded-full transition-colors"
         >
           <ArrowLeft className="w-6 h-6" />

@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   NewsItem,
   NewsSubmission,
   NewsComment,
-  AppViewMode,
-  MobileTab,
   TopCategoryTab,
 } from './types';
 import {
@@ -27,30 +26,18 @@ import { Way2NewsFlipView } from './components/Way2NewsFlipView';
 import { CommentsDrawer } from './components/CommentsDrawer';
 import { NotificationsDrawer } from './components/NotificationsDrawer';
 import { SearchModal } from './components/SearchModal';
+import { NotFoundScreen } from './components/NotFoundScreen';
 
 import {
   Smartphone,
   LayoutDashboard,
   Sparkles,
-  Share2,
   Check,
-  Radio,
-  Image as ImageIcon,
-  Upload,
 } from 'lucide-react';
 
 export default function App() {
-  // Mode state: Mobile App or Admin Panel
-  const [viewMode, setViewMode] = useState<AppViewMode>('mobile');
-
-  // Mobile navigation state
-  const [activeMobileTab, setActiveMobileTab] = useState<MobileTab>('home');
-  const [activeTopTab, setActiveTopTab] = useState<TopCategoryTab>('హోం');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-
-  // Screen selection state
-  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
-  const [selectedVoiceNews, setSelectedVoiceNews] = useState<NewsItem | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Overlays / Modals
   const [isFlipReaderOpen, setIsFlipReaderOpen] = useState(false);
@@ -77,46 +64,28 @@ export default function App() {
     }, 3000);
   };
 
+  // Determine current top tab based on path
+  const getActiveTopTab = (): TopCategoryTab => {
+    if (location.pathname === '/video') return 'వీడియో';
+    if (location.pathname.startsWith('/voice')) return 'VOICE';
+    if (location.pathname === '/category/more') return 'ఫోటోలు';
+    if (location.pathname === '/category/khammam') return 'ఫాలో';
+    return 'హోం';
+  };
+
   // Top category tab behavior
   const handleSelectTopTab = (tab: TopCategoryTab) => {
-    setActiveTopTab(tab);
     if (tab === 'హోం') {
-      setActiveMobileTab('home');
-      setSelectedNews(null);
-      setSelectedVoiceNews(null);
+      navigate('/');
     } else if (tab === 'వీడియో') {
-      setActiveMobileTab('video');
-      setSelectedNews(null);
-      setSelectedVoiceNews(null);
+      navigate('/video');
     } else if (tab === 'VOICE') {
-      // Launch voice player for breaking news
-      setSelectedVoiceNews(newsList[0]);
+      navigate('/voice');
     } else if (tab === 'ఫోటోలు') {
-      setSelectedCategoryId('more');
-      setActiveMobileTab('home');
+      navigate('/category/more');
     } else if (tab === 'ఫాలో') {
-      setSelectedCategoryId('khammam');
-      setActiveMobileTab('home');
+      navigate('/category/khammam');
     }
-  };
-
-  // Bottom Navigation tab selection
-  const handleSelectMobileTab = (tab: MobileTab) => {
-    setActiveMobileTab(tab);
-    setSelectedNews(null);
-    setSelectedVoiceNews(null);
-  };
-
-  // Select news for full detail view
-  const handleSelectNews = (news: NewsItem) => {
-    setSelectedNews(news);
-    setSelectedVoiceNews(null);
-  };
-
-  // Play voice news
-  const handlePlayVoice = (news: NewsItem, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setSelectedVoiceNews(news);
   };
 
   // Toggle Bookmark
@@ -137,7 +106,7 @@ export default function App() {
   // Share news handler
   const handleShare = (news: NewsItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const shareText = `*రచ్చ బండ - VOICE*\n${news.title}\n${news.shortSummary}\n\n👉 ప్రజల మాటే... మా వార్త: ${window.location.origin}`;
+    const shareText = `*రచ్చ బండ - VOICE*\n${news.title}\n${news.shortSummary}\n\n👉 ప్రజల మాటే... మా వార్త: ${window.location.origin}/news/${news.id}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareText);
       showToast('వాట్సాప్ షేర్ మెసేజ్ కాపీ చేయబడింది! ✓');
@@ -222,98 +191,14 @@ export default function App() {
   const breakingNewsItem = newsList.find((n) => n.isBreaking) || newsList[0];
   const savedNewsItems = newsList.filter((n) => savedNewsIds.includes(n.id));
 
-  // Render current mobile screen
-  const renderMobileContent = () => {
-    // 1. Voice News Player Screen (Screen 3)
-    if (selectedVoiceNews) {
-      return (
-        <VoicePlayerScreen
-          news={selectedVoiceNews}
-          onBack={() => setSelectedVoiceNews(null)}
-          onShare={handleShare}
-        />
-      );
-    }
+  // Determine route-specific display conditions
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  const isDetailRoute = location.pathname.startsWith('/news/');
+  const isVoiceRoute = location.pathname.startsWith('/voice');
+  const isSubmitRoute = location.pathname === '/submit';
 
-    // 2. News Detail Screen (Screen 2)
-    if (selectedNews) {
-      return (
-        <NewsDetailScreen
-          news={selectedNews}
-          onBack={() => setSelectedNews(null)}
-          onOpenVoicePlayer={(n) => setSelectedVoiceNews(n)}
-          onSelectRelatedNews={(n) => setSelectedNews(n)}
-          relatedNews={newsList.filter((n) => n.id !== selectedNews.id)}
-          isSaved={savedNewsIds.includes(selectedNews.id)}
-          onToggleSave={handleToggleSave}
-          onOpenComments={(id) => setCommentingNewsId(id)}
-          onShare={handleShare}
-        />
-      );
-    }
-
-    // 3. Submit News Screen (Screen 4)
-    if (activeMobileTab === 'submit') {
-      return (
-        <SubmitNewsScreen
-          onBack={() => setActiveMobileTab('home')}
-          onSubmitSuccess={handleNewCitizenSubmission}
-        />
-      );
-    }
-
-    // 4. Video News Screen
-    if (activeMobileTab === 'video') {
-      return (
-        <VideoScreen
-          newsList={newsList}
-          onSelectNews={handleSelectNews}
-          onShare={handleShare}
-        />
-      );
-    }
-
-    // 5. Saved News Screen
-    if (activeMobileTab === 'saved') {
-      return (
-        <SavedScreen
-          savedNews={savedNewsItems}
-          onSelectNews={handleSelectNews}
-          onPlayVoice={handlePlayVoice}
-          onToggleSave={handleToggleSave}
-          onShare={handleShare}
-          onExploreNews={() => setActiveMobileTab('home')}
-        />
-      );
-    }
-
-    // 6. Reporter App Home (Screen 5)
-    if (activeMobileTab === 'profile') {
-      return (
-        <ReporterScreen
-          onOpenSubmitNews={() => setActiveMobileTab('submit')}
-          submissions={submissions}
-          onOpenAdmin={() => setViewMode('admin')}
-        />
-      );
-    }
-
-    // 7. Default: Home Screen (Screen 1)
-    return (
-      <HomeScreen
-        newsList={newsList}
-        breakingNews={breakingNewsItem}
-        selectedCategoryId={selectedCategoryId}
-        onSelectCategory={setSelectedCategoryId}
-        onSelectNews={handleSelectNews}
-        onPlayVoice={handlePlayVoice}
-        savedNewsIds={savedNewsIds}
-        onToggleSave={handleToggleSave}
-        onShare={handleShare}
-        onOpenFlipMode={() => setIsFlipReaderOpen(true)}
-      />
-    );
-  };
+  const hideHeader = isDetailRoute || isVoiceRoute || isSubmitRoute;
+  const hideBottomNav = isDetailRoute || isVoiceRoute;
 
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-900 selection:bg-[#E41E26] selection:text-white">
@@ -326,7 +211,7 @@ export default function App() {
           </span>
           <span className="text-neutral-500 hidden sm:inline">|</span>
           <span className="text-neutral-400 hidden sm:inline">
-            ప్రజల మాటే... మా వార్త (WayToNews Telugu Platform)
+            ప్రజల మాటే... మా వార్త (Telugu News Platform)
           </span>
         </div>
 
@@ -334,9 +219,9 @@ export default function App() {
           {/* Mobile App View Button */}
           <button
             id="switch-view-mobile-btn"
-            onClick={() => setViewMode('mobile')}
+            onClick={() => navigate('/')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all ${
-              viewMode === 'mobile'
+              !isAdminRoute
                 ? 'bg-[#E41E26] text-white shadow-md'
                 : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
             }`}
@@ -348,9 +233,9 @@ export default function App() {
           {/* Admin Panel Dashboard Button */}
           <button
             id="switch-view-admin-btn"
-            onClick={() => setViewMode('admin')}
+            onClick={() => navigate('/admin')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all ${
-              viewMode === 'admin'
+              isAdminRoute
                 ? 'bg-[#E41E26] text-white shadow-md'
                 : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
             }`}
@@ -364,14 +249,14 @@ export default function App() {
             id="shortcut-flip-btn"
             onClick={() => setIsFlipReaderOpen(true)}
             className="flex items-center gap-1 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 px-2.5 py-1.5 rounded-lg font-bold transition-colors"
-            title="Way2News స్టైల్ 60-పదాల కార్డ్ రీడర్"
+            title="రచ్చ బండ 60-పదాల కార్డ్ రీడర్"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span className="hidden md:inline">ఫ్లిప్ మోడ్</span>
           </button>
 
           {/* Device Frame Toggle for Desktop */}
-          {viewMode === 'mobile' && (
+          {!isAdminRoute && (
             <button
               onClick={() => setIsDeviceFramed(!isDeviceFramed)}
               className="hidden lg:flex items-center gap-1 text-[11px] text-neutral-400 hover:text-white px-2 py-1 rounded bg-neutral-800"
@@ -382,77 +267,208 @@ export default function App() {
         </div>
       </div>
 
-      {/* Main View Render */}
-      {viewMode === 'admin' ? (
-        <AdminDashboard
-          submissions={submissions}
-          onApproveSubmission={handleApproveSubmission}
-          onRejectSubmission={handleRejectSubmission}
-          onSwitchToMobile={() => setViewMode('mobile')}
-          publishedCount={newsList.length}
-          totalNewsCount={125 + newsList.length - INITIAL_NEWS.length}
+      {/* Main View Router */}
+      <Routes>
+        {/* Admin Dashboard Full Screen Route */}
+        <Route
+          path="/admin"
+          element={
+            <AdminDashboard
+              submissions={submissions}
+              onApproveSubmission={handleApproveSubmission}
+              onRejectSubmission={handleRejectSubmission}
+              onSwitchToMobile={() => navigate('/')}
+              publishedCount={newsList.length}
+              totalNewsCount={125 + newsList.length - INITIAL_NEWS.length}
+            />
+          }
         />
-      ) : (
-        /* Mobile App View with optional device casing on desktop */
-        <div className="flex items-center justify-center min-h-[calc(100vh-42px)] p-0 lg:py-6 bg-neutral-900">
-          <div
-            className={`w-full bg-white transition-all overflow-hidden ${
-              isDeviceFramed
-                ? 'max-w-[440px] rounded-none sm:rounded-[36px] shadow-2xl border-0 sm:border-[8px] sm:border-neutral-800 sm:ring-1 sm:ring-neutral-700 min-h-[780px]'
-                : 'max-w-xl shadow-xl'
-            }`}
-          >
-            {/* Phone Notch/Speaker bar (only in phone frame mode) */}
-            {isDeviceFramed && (
-              <div className="hidden sm:flex items-center justify-between px-6 pt-2.5 pb-1 bg-[#E41E26] text-white text-[11px] font-mono">
-                <span>9:41</span>
-                <div className="w-20 h-4 bg-black rounded-full mx-auto" />
-                <div className="flex items-center gap-1 text-[10px]">
-                  <span>5G</span>
-                  <span>100%</span>
-                </div>
+
+        {/* Mobile App Routes Shell */}
+        <Route
+          path="/*"
+          element={
+            <div className="flex items-center justify-center min-h-[calc(100vh-42px)] p-0 lg:py-6 bg-neutral-900">
+              <div
+                className={`w-full bg-white transition-all overflow-hidden ${
+                  isDeviceFramed
+                    ? 'max-w-[440px] rounded-none sm:rounded-[36px] shadow-2xl border-0 sm:border-[8px] sm:border-neutral-800 sm:ring-1 sm:ring-neutral-700 min-h-[780px]'
+                    : 'max-w-xl shadow-xl'
+                }`}
+              >
+                {/* Phone Notch/Speaker bar (only in phone frame mode) */}
+                {isDeviceFramed && (
+                  <div className="hidden sm:flex items-center justify-between px-6 pt-2.5 pb-1 bg-[#E41E26] text-white text-[11px] font-mono">
+                    <span>9:41</span>
+                    <div className="w-20 h-4 bg-black rounded-full mx-auto" />
+                    <div className="flex items-center gap-1 text-[10px]">
+                      <span>5G</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* App Header */}
+                {!hideHeader && (
+                  <Header
+                    activeTopTab={getActiveTopTab()}
+                    onSelectTopTab={handleSelectTopTab}
+                    onOpenSearch={() => setIsSearchOpen(true)}
+                    onOpenNotifications={() => setIsNotificationsOpen(true)}
+                    unreadCount={newsList.filter((n) => n.isBreaking).length}
+                    onSwitchToAdmin={() => navigate('/admin')}
+                    onToggleFlipMode={() => setIsFlipReaderOpen(true)}
+                    isFlipMode={isFlipReaderOpen}
+                  />
+                )}
+
+                {/* Screen Content Routes */}
+                <main>
+                  <Routes>
+                    <Route
+                      path="/"
+                      element={
+                        <HomeScreen
+                          newsList={newsList}
+                          breakingNews={breakingNewsItem}
+                          onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                          onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
+                          savedNewsIds={savedNewsIds}
+                          onToggleSave={handleToggleSave}
+                          onShare={handleShare}
+                          onOpenFlipMode={() => setIsFlipReaderOpen(true)}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/category/:slug"
+                      element={
+                        <HomeScreen
+                          newsList={newsList}
+                          breakingNews={breakingNewsItem}
+                          onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                          onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
+                          savedNewsIds={savedNewsIds}
+                          onToggleSave={handleToggleSave}
+                          onShare={handleShare}
+                          onOpenFlipMode={() => setIsFlipReaderOpen(true)}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/location/:slug"
+                      element={
+                        <HomeScreen
+                          newsList={newsList}
+                          breakingNews={breakingNewsItem}
+                          onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                          onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
+                          savedNewsIds={savedNewsIds}
+                          onToggleSave={handleToggleSave}
+                          onShare={handleShare}
+                          onOpenFlipMode={() => setIsFlipReaderOpen(true)}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/news/:id"
+                      element={
+                        <NewsDetailScreen
+                          newsList={newsList}
+                          onBack={() => navigate(-1)}
+                          onOpenVoicePlayer={(n) => navigate(`/voice/${n.id}`)}
+                          onSelectRelatedNews={(n) => navigate(`/news/${n.id}`)}
+                          isSaved={false}
+                          onToggleSave={handleToggleSave}
+                          onOpenComments={(id) => setCommentingNewsId(id)}
+                          onShare={handleShare}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/voice"
+                      element={
+                        <VoicePlayerScreen
+                          newsList={newsList}
+                          onBack={() => navigate(-1)}
+                          onShare={handleShare}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/voice/:id"
+                      element={
+                        <VoicePlayerScreen
+                          newsList={newsList}
+                          onBack={() => navigate(-1)}
+                          onShare={handleShare}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/video"
+                      element={
+                        <VideoScreen
+                          newsList={newsList}
+                          onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                          onShare={handleShare}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/saved"
+                      element={
+                        <SavedScreen
+                          savedNews={savedNewsItems}
+                          onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                          onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
+                          onToggleSave={handleToggleSave}
+                          onShare={handleShare}
+                          onExploreNews={() => navigate('/')}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/submit"
+                      element={
+                        <SubmitNewsScreen
+                          onBack={() => navigate(-1)}
+                          onSubmitSuccess={handleNewCitizenSubmission}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/profile"
+                      element={
+                        <ReporterScreen
+                          onOpenSubmitNews={() => navigate('/submit')}
+                          submissions={submissions}
+                          onOpenAdmin={() => navigate('/admin')}
+                        />
+                      }
+                    />
+                    <Route path="*" element={<NotFoundScreen />} />
+                  </Routes>
+                </main>
+
+                {/* Bottom Navigation */}
+                {!hideBottomNav && (
+                  <BottomNav savedCount={savedNewsIds.length} />
+                )}
               </div>
-            )}
+            </div>
+          }
+        />
+      </Routes>
 
-            {/* App Header (Hide on sub-screens like VoicePlayer or SubmitNews which have their own top bar) */}
-            {!selectedVoiceNews &&
-              !selectedNews &&
-              activeMobileTab !== 'submit' && (
-                <Header
-                  activeTopTab={activeTopTab}
-                  onSelectTopTab={handleSelectTopTab}
-                  onOpenSearch={() => setIsSearchOpen(true)}
-                  onOpenNotifications={() => setIsNotificationsOpen(true)}
-                  unreadCount={newsList.filter((n) => n.isBreaking).length}
-                  onSwitchToAdmin={() => setViewMode('admin')}
-                  onToggleFlipMode={() => setIsFlipReaderOpen(true)}
-                  isFlipMode={isFlipReaderOpen}
-                />
-              )}
-
-            {/* Screen Content */}
-            <main>{renderMobileContent()}</main>
-
-            {/* Bottom Navigation (Visible on main tabs, hidden during full-screen voice player or detail) */}
-            {!selectedVoiceNews && !selectedNews && (
-              <BottomNav
-                activeTab={activeMobileTab}
-                onSelectTab={handleSelectMobileTab}
-                savedCount={savedNewsIds.length}
-              />
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 60-Word Way2News Magazine Flip Card Reader Overlay */}
+      {/* 60-Word Rachabanda Card Reader Overlay */}
       {isFlipReaderOpen && (
         <Way2NewsFlipView
           newsList={newsList}
           onClose={() => setIsFlipReaderOpen(false)}
           onSelectDetail={(n) => {
             setIsFlipReaderOpen(false);
-            setSelectedNews(n);
+            navigate(`/news/${n.id}`);
           }}
           onShare={handleShare}
         />
@@ -478,7 +494,7 @@ export default function App() {
           onClose={() => setIsNotificationsOpen(false)}
           onSelectNews={(n) => {
             setIsNotificationsOpen(false);
-            setSelectedNews(n);
+            navigate(`/news/${n.id}`);
           }}
         />
       )}
@@ -490,7 +506,7 @@ export default function App() {
           onClose={() => setIsSearchOpen(false)}
           onSelectNews={(n) => {
             setIsSearchOpen(false);
-            setSelectedNews(n);
+            navigate(`/news/${n.id}`);
           }}
         />
       )}
