@@ -1,0 +1,10 @@
+{
+  "name": "రచ్చ బండ - VOICE",
+  "description": "రచ్చ బండ - VOICE (Racha Banda): స్థానిక వార్తలు, లైవ్ బ్రేకింగ్ అప్‌డేట్స్, వాయిస్ న్యూస్ & రిపోర్టర్ యాప్. ప్రజల మాటే... మా వార్త.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
