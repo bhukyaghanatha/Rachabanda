@@ -32,3 +32,9 @@ dist-ssr/
 
 # AI Studio archive backups (preserved on disk, ignored by git)
 *.rar
+
+# Supabase local temporary files
+supabase/.temp/
+
+# Local scratch directory
+scratch/

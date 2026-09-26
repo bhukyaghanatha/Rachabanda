@@ -91,31 +91,35 @@ export const VoicePlayerScreen: React.FC<VoicePlayerScreenProps> = ({
   return (
     <div className="min-h-screen bg-neutral-950 text-white pb-20 flex flex-col justify-between select-none">
       {/* Top Header Bar */}
-      <div className="p-4 flex items-center justify-between border-b border-neutral-800 bg-neutral-900/60 backdrop-blur-md">
-        <button
-          id="voice-player-back-btn"
-          onClick={handleBack}
-          className="p-1.5 -ml-1.5 rounded-full hover:bg-neutral-800 text-neutral-300 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex items-center gap-2">
-          <Radio className="w-4 h-4 text-[#E41E26] animate-pulse" />
-          <h2 className="text-sm font-bold tracking-wide telugu-heading">
-            వాయిస్ న్యూస్ స్టూడియో
-          </h2>
+      <div className="border-b border-neutral-800 bg-neutral-900/60 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto p-4 flex items-center justify-between">
+          <button
+            id="voice-player-back-btn"
+            onClick={handleBack}
+            aria-label="వెనుకకు వెళ్లండి (Go back)"
+            className="p-1.5 -ml-1.5 rounded-full hover:bg-neutral-800 text-neutral-300 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4 text-[#E41E26] animate-pulse" />
+            <span className="text-sm font-bold tracking-wide telugu-heading">
+              వాయిస్ న్యూస్ స్టూడియో
+            </span>
+          </div>
+          <button
+            id="voice-player-share-btn"
+            onClick={handleShareClick}
+            aria-label={`${news.title} షేర్ చేయండి (Share news audio)`}
+            className="p-1.5 -mr-1.5 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <Share2 className="w-5 h-5" />
+          </button>
         </div>
-        <button
-          id="voice-player-share-btn"
-          onClick={handleShareClick}
-          className="p-1.5 -mr-1.5 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
-        >
-          <Share2 className="w-5 h-5" />
-        </button>
       </div>
 
       {/* Main Studio Visual Card */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto w-full">
         {/* News Thumbnail Card */}
         <div className="relative w-48 h-48 rounded-3xl overflow-hidden shadow-2xl border border-neutral-800 mb-6 bg-neutral-900">
           <img
@@ -136,12 +140,12 @@ export const VoicePlayerScreen: React.FC<VoicePlayerScreenProps> = ({
         </h1>
 
         {/* Short Summary */}
-        <p className="mt-3 text-xs text-neutral-400 line-clamp-3 leading-relaxed">
+        <p className="mt-3 text-xs text-neutral-300 line-clamp-3 leading-relaxed">
           {news.shortSummary}
         </p>
 
         {/* Animated Sound Waveform Bars */}
-        <div className="w-full flex items-center justify-center gap-1.5 h-12 my-6 px-4">
+        <div aria-hidden="true" className="w-full flex items-center justify-center gap-1.5 h-12 my-6 px-4">
           {[16, 28, 20, 36, 24, 32, 18, 40, 26, 20, 34, 28, 16, 32, 38, 22, 18, 30].map(
             (h, i) => (
               <div
@@ -162,7 +166,9 @@ export const VoicePlayerScreen: React.FC<VoicePlayerScreenProps> = ({
           <button
             id="voice-player-toggle-btn"
             onClick={togglePlay}
-            className="w-16 h-16 rounded-full bg-[#E41E26] hover:bg-[#B71C1C] text-white flex items-center justify-center shadow-xl active:scale-95 transition-all"
+            aria-label={isPlaying ? 'వాయిస్ న్యూస్ పాజ్ చేయండి (Pause voice news)' : 'వాయిస్ న్యూస్ ప్లే చేయండి (Play voice news)'}
+            aria-pressed={isPlaying}
+            className="w-16 h-16 rounded-full bg-[#E41E26] hover:bg-[#B71C1C] text-white flex items-center justify-center shadow-xl active:scale-95 transition-all focus-visible:ring-4 focus-visible:ring-red-400"
           >
             {isPlaying ? (
               <Pause className="w-7 h-7 fill-white" />

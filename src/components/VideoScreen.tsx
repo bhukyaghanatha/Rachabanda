@@ -1,6 +1,6 @@
 import React from 'react';
 import { NewsItem } from '../types';
-import { Play, Share2, Eye, Volume2 } from 'lucide-react';
+import { Play, Share2 } from 'lucide-react';
 
 interface VideoScreenProps {
   newsList: NewsItem[];
@@ -14,21 +14,30 @@ export const VideoScreen: React.FC<VideoScreenProps> = ({
   onShare,
 }) => {
   return (
-    <div className="min-h-screen bg-[#111111] text-white pb-24 px-3 pt-3">
+    <div role="region" aria-label="లైవ్ & వీడియో వార్తలు (Shorts & Videos)" className="min-h-screen bg-[#111111] text-white pb-24 md:pb-12 px-3 sm:px-4 pt-4">
       <div className="flex items-center justify-between px-1 mb-3">
-        <h2 className="text-base font-black telugu-heading flex items-center gap-2">
+        <h1 className="text-base font-black telugu-heading flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
           లైవ్ & వీడియో వార్తలు (Shorts & Videos)
-        </h2>
+        </h1>
         <span className="text-xs text-neutral-400">తాజా అప్‌డేట్స్</span>
       </div>
 
-      <div className="space-y-4">
-        {newsList.map((item, index) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {newsList.map((item) => (
           <div
             key={item.id}
+            role="article"
+            tabIndex={0}
+            aria-label={item.title}
             onClick={() => onSelectNews(item)}
-            className="bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-800 shadow-lg cursor-pointer group"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelectNews(item);
+              }
+            }}
+            className="bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-800 shadow-lg cursor-pointer group focus-visible:ring-2 focus-visible:ring-red-500 outline-none"
           >
             {/* Video Thumbnail with Play Overlay */}
             <div className="relative aspect-video w-full bg-neutral-950 overflow-hidden">
@@ -54,17 +63,12 @@ export const VideoScreen: React.FC<VideoScreenProps> = ({
 
             {/* Video Caption & Info */}
             <div className="p-3.5">
-              <h3 className="text-sm font-bold leading-snug line-clamp-2 telugu-heading group-hover:text-red-400 transition-colors">
+              <h2 className="text-sm font-bold leading-snug line-clamp-2 telugu-heading group-hover:text-red-400 transition-colors">
                 {item.title}
-              </h3>
+              </h2>
 
               <div className="mt-2.5 pt-2 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-400">
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1">
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>{(index + 1) * 1.4}k వీక్షణలు</span>
-                  </span>
-                  <span>•</span>
                   <span>{item.timeAgo}</span>
                 </div>
 
@@ -73,7 +77,8 @@ export const VideoScreen: React.FC<VideoScreenProps> = ({
                     e.stopPropagation();
                     onShare(item);
                   }}
-                  className="p-1 hover:text-white transition-colors"
+                  aria-label={`${item.title} షేర్ చేయండి (Share video)`}
+                  className="p-1 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-white rounded-md"
                 >
                   <Share2 className="w-4 h-4" />
                 </button>

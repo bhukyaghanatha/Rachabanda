@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   NewsItem,
@@ -6,36 +6,69 @@ import {
   NewsComment,
   TopCategoryTab,
 } from './types';
-import {
-  INITIAL_NEWS,
-  INITIAL_SUBMISSIONS,
-  INITIAL_COMMENTS,
-} from './data/mockNews';
+import { useNews } from './hooks/useNews';
+import { fetchUserBookmarks, addBookmark, removeBookmark } from './services/userService';
+import { getUnreadNotificationCount } from './services/notificationService';
 
 import { Header } from './components/Header';
 import { HomeScreen } from './components/HomeScreen';
-import { NewsDetailScreen } from './components/NewsDetailScreen';
-import { VoicePlayerScreen } from './components/VoicePlayerScreen';
-import { SubmitNewsScreen } from './components/SubmitNewsScreen';
-import { ReporterScreen } from './components/ReporterScreen';
-import { AdminDashboard } from './components/AdminDashboard';
-import { VideoScreen } from './components/VideoScreen';
-import { SavedScreen } from './components/SavedScreen';
 import { BottomNav } from './components/BottomNav';
-import { Way2NewsFlipView } from './components/Way2NewsFlipView';
-import { CommentsDrawer } from './components/CommentsDrawer';
-import { NotificationsDrawer } from './components/NotificationsDrawer';
-import { SearchModal } from './components/SearchModal';
-import { NotFoundScreen } from './components/NotFoundScreen';
+import { LoadingFallback } from './components/LoadingFallback';
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+// Lazy-loaded routes & heavy components for performance & code-splitting
+const AdminDashboard = React.lazy(() =>
+  import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
+);
+const Way2NewsFlipView = React.lazy(() =>
+  import('./components/Way2NewsFlipView').then((m) => ({ default: m.Way2NewsFlipView }))
+);
+const NewsDetailScreen = React.lazy(() =>
+  import('./components/NewsDetailScreen').then((m) => ({ default: m.NewsDetailScreen }))
+);
+const VoicePlayerScreen = React.lazy(() =>
+  import('./components/VoicePlayerScreen').then((m) => ({ default: m.VoicePlayerScreen }))
+);
+const SubmitNewsScreen = React.lazy(() =>
+  import('./components/SubmitNewsScreen').then((m) => ({ default: m.SubmitNewsScreen }))
+);
+const ReporterScreen = React.lazy(() =>
+  import('./components/ReporterScreen').then((m) => ({ default: m.ReporterScreen }))
+);
+const VideoScreen = React.lazy(() =>
+  import('./components/VideoScreen').then((m) => ({ default: m.VideoScreen }))
+);
+const SavedScreen = React.lazy(() =>
+  import('./components/SavedScreen').then((m) => ({ default: m.SavedScreen }))
+);
+const NotFoundScreen = React.lazy(() =>
+  import('./components/NotFoundScreen').then((m) => ({ default: m.NotFoundScreen }))
+);
+const CommentsDrawer = React.lazy(() =>
+  import('./components/CommentsDrawer').then((m) => ({ default: m.CommentsDrawer }))
+);
+const NotificationsDrawer = React.lazy(() =>
+  import('./components/NotificationsDrawer').then((m) => ({ default: m.NotificationsDrawer }))
+);
+const SearchModal = React.lazy(() =>
+  import('./components/SearchModal').then((m) => ({ default: m.SearchModal }))
+);
+
+import { AuthProvider } from './contexts/AuthContext';
+import { AuthModal } from './components/AuthModal';
 
 import {
   Smartphone,
   LayoutDashboard,
   Sparkles,
   Check,
+  Lock,
+  ShieldAlert,
+  LogIn,
 } from 'lucide-react';
+import { useAuth } from './hooks/useAuth';
 
-export default function App() {
+function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -45,17 +78,93 @@ export default function App() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // Phone frame mockup wrapper toggle on desktop
-  const [isDeviceFramed, setIsDeviceFramed] = useState(true);
-
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // App Data State
-  const [newsList, setNewsList] = useState<NewsItem[]>(INITIAL_NEWS);
-  const [submissions, setSubmissions] = useState<NewsSubmission[]>(INITIAL_SUBMISSIONS);
-  const [comments, setComments] = useState<NewsComment[]>(INITIAL_COMMENTS);
-  const [savedNewsIds, setSavedNewsIds] = useState<string[]>(['news-2']);
+  // Authentication state
+  const { user, profile, isAuthenticated, isAdmin, isEditor, openAuthModal } = useAuth();
+
+  // App Data State: Live Supabase News hook with graceful fallback
+  const {
+    newsList,
+    setNewsList,
+    categories,
+    districts,
+    locations,
+    isLoading: isNewsLoading,
+    refreshNews,
+  } = useNews();
+
+  const [submissions, setSubmissions] = useState<NewsSubmission[]>([]);
+  const [savedNewsIds, setSavedNewsIds] = useState<string[]>([]);
+  const [isLoadingBookmarks, setIsLoadingBookmarks] = useState<boolean>(false);
+
+  // Load real bookmarks from Supabase when user authenticates
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadBookmarks() {
+      if (user?.id) {
+        setIsLoadingBookmarks(true);
+        try {
+          const { data, error } = await fetchUserBookmarks(user.id);
+          if (!isCancelled) {
+            if (error) {
+              console.warn('Could not load user bookmarks:', error);
+            } else {
+              setSavedNewsIds(data);
+            }
+          }
+        } catch (err) {
+          console.warn('Error loading user bookmarks:', err);
+        } finally {
+          if (!isCancelled) {
+            setIsLoadingBookmarks(false);
+          }
+        }
+      } else {
+        // Guest user: clear saved bookmarks
+        setSavedNewsIds([]);
+        setIsLoadingBookmarks(false);
+      }
+    }
+
+    loadBookmarks();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [user?.id]);
+
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState<number>(0);
+
+  // Load real unread notifications count from Supabase
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadNotifCount() {
+      if (user?.id) {
+        try {
+          const count = await getUnreadNotificationCount();
+          if (!isCancelled) {
+            setUnreadNotificationsCount(count);
+          }
+        } catch (err) {
+          console.warn('Error loading unread notifications count:', err);
+        }
+      } else {
+        if (!isCancelled) {
+          setUnreadNotificationsCount(0);
+        }
+      }
+    }
+
+    loadNotifCount();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [user?.id]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -69,7 +178,7 @@ export default function App() {
     if (location.pathname === '/video') return 'వీడియో';
     if (location.pathname.startsWith('/voice')) return 'VOICE';
     if (location.pathname === '/category/more') return 'ఫోటోలు';
-    if (location.pathname === '/category/khammam') return 'ఫాలో';
+    if (location.pathname === '/category/following' || location.pathname === '/category/khammam') return 'ఫాలో';
     return 'హోం';
   };
 
@@ -84,23 +193,53 @@ export default function App() {
     } else if (tab === 'ఫోటోలు') {
       navigate('/category/more');
     } else if (tab === 'ఫాలో') {
-      navigate('/category/khammam');
+      navigate('/category/following');
     }
   };
 
-  // Toggle Bookmark
-  const handleToggleSave = (newsId: string, e?: React.MouseEvent) => {
+  // Toggle Bookmark with Supabase persistence and optimistic UI
+  const handleToggleSave = async (newsId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setSavedNewsIds((prev) => {
-      const exists = prev.includes(newsId);
-      if (exists) {
-        showToast('బుక్‌మార్క్ నుండి తొలగించబడింది');
-        return prev.filter((id) => id !== newsId);
-      } else {
-        showToast('వార్త సేవ్ చేయబడింది ✓');
-        return [...prev, newsId];
+
+    // Guest protection: prompt sign-in, do not touch Supabase, do not write fake records
+    if (!isAuthenticated || !user?.id) {
+      showToast('వార్తను సేవ్ చేయడానికి దయచేసి లాగిన్ అవ్వండి / Please sign in to save');
+      openAuthModal();
+      return;
+    }
+
+    const wasSaved = savedNewsIds.includes(newsId);
+
+    // 1. Optimistic UI update
+    if (wasSaved) {
+      setSavedNewsIds((prev) => prev.filter((id) => id !== newsId));
+      showToast('బుక్‌మార్క్ నుండి తొలగించబడింది');
+    } else {
+      setSavedNewsIds((prev) => [...prev, newsId]);
+      showToast('వార్త సేవ్ చేయబడింది ✓');
+    }
+
+    // 2. Supabase DB mutation
+    try {
+      const { error } = wasSaved
+        ? await removeBookmark(user.id, newsId)
+        : await addBookmark(user.id, newsId);
+
+      // 3. Rollback if error
+      if (error) {
+        console.error('Supabase bookmark error:', error);
+        setSavedNewsIds((prev) =>
+          wasSaved ? [...prev, newsId] : prev.filter((id) => id !== newsId)
+        );
+        showToast('బుక్‌మార్క్ అప్‌డేట్ చేయడం విఫలమైంది: ' + error.message);
       }
-    });
+    } catch (err: any) {
+      console.error('Supabase bookmark exception:', err);
+      setSavedNewsIds((prev) =>
+        wasSaved ? [...prev, newsId] : prev.filter((id) => id !== newsId)
+      );
+      showToast('బుక్‌మార్క్ అప్‌డేట్ చేయడం విఫలమైంది');
+    }
   };
 
   // Share news handler
@@ -115,63 +254,24 @@ export default function App() {
     }
   };
 
-  // Add Comment handler
-  const handleAddComment = (newsId: string, text: string, userName: string) => {
-    const newComment: NewsComment = {
-      id: `c-${Date.now()}`,
-      newsId,
-      userName,
-      userLocation: 'ఖమ్మం',
-      comment: text,
-      timeAgo: 'ఇప్పుడే',
-      likes: 1,
-    };
-    setComments((prev) => [newComment, ...prev]);
-
-    // increment comment count in newsList
+  // Comment count sync handler (syncs in-memory news items when comments are loaded/added/deleted)
+  const handleCommentCountChange = (newsId: string, count: number) => {
     setNewsList((prev) =>
       prev.map((item) =>
-        item.id === newsId
-          ? { ...item, commentsCount: item.commentsCount + 1 }
-          : item
+        item.id === newsId ? { ...item, commentsCount: count } : item
       )
     );
-    showToast('మీ కామెంట్ జోడించబడింది! ✓');
   };
 
   // Citizen submission approval in Admin Panel
   const handleApproveSubmission = (subId: string) => {
-    const sub = submissions.find((s) => s.id === subId);
-    if (!sub) return;
-
-    // Update status
+    // Update status in local submissions state if present
     setSubmissions((prev) =>
       prev.map((s) => (s.id === subId ? { ...s, status: 'approved' } : s))
     );
 
-    // Convert to live published news item!
-    const publishedItem: NewsItem = {
-      id: `news-${Date.now()}`,
-      title: sub.title,
-      shortSummary: sub.details,
-      content: `${sub.details}\n\nస్థానిక పౌరుడు మరియు రిపోర్టర్ ${sub.reporterName} నుండి అందిన తాజా నివేదిక ప్రకారం, రచ్చ బండ న్యూస్ డెస్క్ దీనిని పరిశీలించి ఆమోదించింది.`,
-      location: sub.location,
-      category: sub.category,
-      imageUrl:
-        sub.imageUrl ||
-        'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80',
-      timeAgo: 'కొద్దిసేపటి క్రితం',
-      publishedDate: new Date().toLocaleDateString('te-IN'),
-      reporterName: sub.reporterName,
-      reporterId: 'RBV-CITIZEN',
-      audioDuration: '0:50',
-      likes: 42,
-      commentsCount: 3,
-      factChecked: true,
-      audioNarratedText: `రచ్చ బండ ప్రత్యేక పౌర వార్త. ${sub.title}. ${sub.details}`,
-    };
-
-    setNewsList((prev) => [publishedItem, ...prev]);
+    // Refresh real published news from Supabase
+    refreshNews();
     showToast('వార్త ఆమోదించబడింది & లైవ్‌లోకి ప్రచురించబడింది! ✓');
   };
 
@@ -201,7 +301,7 @@ export default function App() {
   const hideBottomNav = isDetailRoute || isVoiceRoute;
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-neutral-900 selection:bg-[#E41E26] selection:text-white">
+    <div className="min-h-screen bg-[#F8F9FA] text-neutral-900 selection:bg-[#E41E26] selection:text-white">
       {/* Universal Top Switcher Bar (App View vs Admin Dashboard) */}
       <div className="bg-[#0A0A0A] border-b border-neutral-800 text-white px-4 py-2 flex flex-wrap items-center justify-between text-xs gap-3">
         <div className="flex items-center gap-2">
@@ -216,31 +316,33 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Mobile App View Button */}
+          {/* News Portal View Button */}
           <button
             id="switch-view-mobile-btn"
             onClick={() => navigate('/')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all ${
+            aria-label="రచ్చ బండ న్యూస్ పోర్టల్ వీక్షణకి మారండి"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] ${
               !isAdminRoute
                 ? 'bg-[#E41E26] text-white shadow-md'
                 : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
             }`}
           >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>మొబైల్ యాప్</span>
+            <Smartphone className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>న్యూస్ పోర్టల్</span>
           </button>
 
           {/* Admin Panel Dashboard Button */}
           <button
             id="switch-view-admin-btn"
             onClick={() => navigate('/admin')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all ${
+            aria-label="అడ్మిన్ డ్యాష్‌బోర్డ్‌కి మారండి"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] ${
               isAdminRoute
                 ? 'bg-[#E41E26] text-white shadow-md'
                 : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
             }`}
           >
-            <LayoutDashboard className="w-3.5 h-3.5" />
+            <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
             <span>అడ్మిన్ డ్యాష్‌బోర్డ్</span>
           </button>
 
@@ -248,214 +350,286 @@ export default function App() {
           <button
             id="shortcut-flip-btn"
             onClick={() => setIsFlipReaderOpen(true)}
-            className="flex items-center gap-1 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 px-2.5 py-1.5 rounded-lg font-bold transition-colors"
+            aria-label="రచ్చ బండ 60-పదాల కార్డ్ రీడర్ ఫ్లిప్ మోడ్ తెరవండి"
+            className="flex items-center gap-1 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 px-2.5 py-1.5 rounded-lg font-bold transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-400"
             title="రచ్చ బండ 60-పదాల కార్డ్ రీడర్"
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
             <span className="hidden md:inline">ఫ్లిప్ మోడ్</span>
           </button>
-
-          {/* Device Frame Toggle for Desktop */}
-          {!isAdminRoute && (
-            <button
-              onClick={() => setIsDeviceFramed(!isDeviceFramed)}
-              className="hidden lg:flex items-center gap-1 text-[11px] text-neutral-400 hover:text-white px-2 py-1 rounded bg-neutral-800"
-            >
-              {isDeviceFramed ? 'ఫుల్ స్క్రీన్' : 'ఫోన్ ఫ్రేమ్'}
-            </button>
-          )}
         </div>
       </div>
 
       {/* Main View Router */}
       <Routes>
-        {/* Admin Dashboard Full Screen Route */}
+        {/* Admin Dashboard Full Screen Route - Protected by Auth & Role */}
         <Route
           path="/admin"
           element={
-            <AdminDashboard
-              submissions={submissions}
-              onApproveSubmission={handleApproveSubmission}
-              onRejectSubmission={handleRejectSubmission}
-              onSwitchToMobile={() => navigate('/')}
-              publishedCount={newsList.length}
-              totalNewsCount={125 + newsList.length - INITIAL_NEWS.length}
-            />
+            !isAuthenticated ? (
+              <div className="min-h-[calc(100vh-42px)] bg-neutral-900 flex items-center justify-center p-4">
+                <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-8 max-w-md w-full text-center text-white shadow-2xl">
+                  <div className="w-16 h-16 rounded-full bg-red-500/10 text-[#E41E26] flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+                    <Lock className="w-8 h-8" aria-hidden="true" />
+                  </div>
+                  <h2 className="text-xl font-black telugu-heading mb-2">
+                    అడ్మిన్ లాగిన్ అవసరం (Admin Login Required)
+                  </h2>
+                  <p className="text-sm text-neutral-300 mb-6 leading-relaxed">
+                    అడ్మిన్ డ్యాష్‌బోర్డ్ యాక్సెస్ చేయడానికి దయచేసి అడ్మిన్ లేదా ఎడిటర్ ఖాతాతో లాగిన్ అవ్వండి.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={openAuthModal}
+                      aria-label="అడ్మిన్ ఖాతాతో లాగిన్ అవ్వండి"
+                      className="w-full py-3 bg-[#E41E26] hover:bg-[#B71C1C] text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26]"
+                    >
+                      <LogIn className="w-4 h-4" aria-hidden="true" />
+                      <span>లాగిన్ అవ్వండి (Login)</span>
+                    </button>
+                    <button
+                      onClick={() => navigate('/')}
+                      aria-label="మొబైల్ యాప్‌కి తిరిగి వెళ్ళండి"
+                      className="w-full py-2.5 bg-neutral-700 hover:bg-neutral-600 text-neutral-200 rounded-xl font-bold text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-neutral-400"
+                    >
+                      మొబైల్ యాప్‌కి తిరిగి వెళ్ళండి
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : !isAdmin && !isEditor ? (
+              <div className="min-h-[calc(100vh-42px)] bg-neutral-900 flex items-center justify-center p-4">
+                <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-8 max-w-md w-full text-center text-white shadow-2xl">
+                  <div className="w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
+                    <ShieldAlert className="w-8 h-8" aria-hidden="true" />
+                  </div>
+                  <h2 className="text-xl font-black telugu-heading mb-2 text-amber-400">
+                    యాక్సెస్ నిరాకరించబడింది (Access Denied)
+                  </h2>
+                  <p className="text-sm text-neutral-300 mb-2 leading-relaxed">
+                    మీ ఖాతా (<span className="text-amber-300 font-mono text-xs">{user?.email}</span>) కి అడ్మిన్ లేదా ఎడిటర్ అధికారాలు లేవు.
+                  </p>
+                  <p className="text-xs text-neutral-300 mb-6">
+                    మీ ప్రస్తుత పాత్ర: <span className="bg-neutral-700 px-2 py-0.5 rounded font-bold text-white uppercase text-[10px]">{profile?.role || 'reader'}</span>. ఈ విభాగాన్ని కేవలం నిర్వాహకులు మాత్రమే చూడగలరు.
+                  </p>
+                  <button
+                    onClick={() => navigate('/')}
+                    aria-label="హోమ్ పేజీకి తిరిగి వెళ్ళండి"
+                    className="w-full py-2.5 bg-[#E41E26] hover:bg-[#B71C1C] text-white rounded-xl font-bold text-sm transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26]"
+                  >
+                    హోమ్ పేజీకి తిరిగి వెళ్ళండి
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <ErrorBoundary fallbackTitle="అడ్మిన్ డ్యాష్‌బోర్డ్ లోడ్ చేయడంలో లోపం (Admin Load Error)">
+                <React.Suspense
+                  fallback={
+                    <LoadingFallback
+                      fullScreen
+                      label="అడ్మిన్ డ్యాష్‌బోర్డ్ లోడ్ అవుతోంది... (Loading Admin Dashboard...)"
+                    />
+                  }
+                >
+                  <AdminDashboard
+                    submissions={submissions}
+                    onApproveSubmission={handleApproveSubmission}
+                    onRejectSubmission={handleRejectSubmission}
+                    onSwitchToMobile={() => navigate('/')}
+                    publishedCount={newsList.length}
+                    totalNewsCount={newsList.length}
+                    onArticlePublished={refreshNews}
+                  />
+                </React.Suspense>
+              </ErrorBoundary>
+            )
           }
         />
 
-        {/* Mobile App Routes Shell */}
+        {/* Main News App Routes Shell */}
         <Route
           path="/*"
           element={
-            <div className="flex items-center justify-center min-h-[calc(100vh-42px)] p-0 lg:py-6 bg-neutral-900">
-              <div
-                className={`w-full bg-white transition-all overflow-hidden ${
-                  isDeviceFramed
-                    ? 'max-w-[440px] rounded-none sm:rounded-[36px] shadow-2xl border-0 sm:border-[8px] sm:border-neutral-800 sm:ring-1 sm:ring-neutral-700 min-h-[780px]'
-                    : 'max-w-xl shadow-xl'
-                }`}
-              >
-                {/* Phone Notch/Speaker bar (only in phone frame mode) */}
-                {isDeviceFramed && (
-                  <div className="hidden sm:flex items-center justify-between px-6 pt-2.5 pb-1 bg-[#E41E26] text-white text-[11px] font-mono">
-                    <span>9:41</span>
-                    <div className="w-20 h-4 bg-black rounded-full mx-auto" />
-                    <div className="flex items-center gap-1 text-[10px]">
-                      <span>5G</span>
-                      <span>100%</span>
-                    </div>
-                  </div>
-                )}
+            <div className="w-full min-h-[calc(100vh-42px)] bg-[#F8F9FA] flex flex-col">
+              {/* App Header */}
+              {!hideHeader && (
+                <Header
+                  activeTopTab={getActiveTopTab()}
+                  onSelectTopTab={handleSelectTopTab}
+                  onOpenSearch={() => setIsSearchOpen(true)}
+                  onOpenNotifications={() => setIsNotificationsOpen(true)}
+                  unreadCount={unreadNotificationsCount}
+                  onSwitchToAdmin={() => navigate('/admin')}
+                  onToggleFlipMode={() => setIsFlipReaderOpen(true)}
+                  isFlipMode={isFlipReaderOpen}
+                />
+              )}
 
-                {/* App Header */}
-                {!hideHeader && (
-                  <Header
-                    activeTopTab={getActiveTopTab()}
-                    onSelectTopTab={handleSelectTopTab}
-                    onOpenSearch={() => setIsSearchOpen(true)}
-                    onOpenNotifications={() => setIsNotificationsOpen(true)}
-                    unreadCount={newsList.filter((n) => n.isBreaking).length}
-                    onSwitchToAdmin={() => navigate('/admin')}
-                    onToggleFlipMode={() => setIsFlipReaderOpen(true)}
-                    isFlipMode={isFlipReaderOpen}
-                  />
-                )}
+              {/* Screen Content Routes */}
+              <main className="flex-1 w-full max-w-7xl mx-auto px-0 sm:px-4 lg:px-8">
+                <ErrorBoundary>
+                  <React.Suspense fallback={<LoadingFallback />}>
+                    <Routes>
+                      <Route
+                        path="/"
+                        element={
+                          <HomeScreen
+                            newsList={newsList}
+                            breakingNews={breakingNewsItem}
+                            isLoading={isNewsLoading}
+                            categories={categories}
+                            districts={districts}
+                            locations={locations}
+                            onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                            onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
+                            savedNewsIds={savedNewsIds}
+                            onToggleSave={handleToggleSave}
+                            onShare={handleShare}
+                            onOpenFlipMode={() => setIsFlipReaderOpen(true)}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/category/:slug"
+                        element={
+                          <HomeScreen
+                            newsList={newsList}
+                            breakingNews={breakingNewsItem}
+                            isLoading={isNewsLoading}
+                            categories={categories}
+                            districts={districts}
+                            locations={locations}
+                            onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                            onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
+                            savedNewsIds={savedNewsIds}
+                            onToggleSave={handleToggleSave}
+                            onShare={handleShare}
+                            onOpenFlipMode={() => setIsFlipReaderOpen(true)}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/location/:slug"
+                        element={
+                          <HomeScreen
+                            newsList={newsList}
+                            breakingNews={breakingNewsItem}
+                            isLoading={isNewsLoading}
+                            categories={categories}
+                            districts={districts}
+                            locations={locations}
+                            onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                            onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
+                            savedNewsIds={savedNewsIds}
+                            onToggleSave={handleToggleSave}
+                            onShare={handleShare}
+                            onOpenFlipMode={() => setIsFlipReaderOpen(true)}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/news/:id"
+                        element={
+                          <NewsDetailScreen
+                            newsList={newsList}
+                            onBack={() => navigate(-1)}
+                            onOpenVoicePlayer={(n) => navigate(`/voice/${n.id}`)}
+                            onSelectRelatedNews={(n) => navigate(`/news/${n.id}`)}
+                            savedNewsIds={savedNewsIds}
+                            onToggleSave={handleToggleSave}
+                            onOpenComments={(id) => setCommentingNewsId(id)}
+                            onShare={handleShare}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/voice"
+                        element={
+                          <VoicePlayerScreen
+                            newsList={newsList}
+                            onBack={() => navigate(-1)}
+                            onShare={handleShare}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/voice/:id"
+                        element={
+                          <VoicePlayerScreen
+                            newsList={newsList}
+                            onBack={() => navigate(-1)}
+                            onShare={handleShare}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/video"
+                        element={
+                          <VideoScreen
+                            newsList={newsList}
+                            onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                            onShare={handleShare}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/saved"
+                        element={
+                          <SavedScreen
+                            savedNews={savedNewsItems}
+                            onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                            onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
+                            onToggleSave={handleToggleSave}
+                            onShare={handleShare}
+                            onExploreNews={() => navigate('/')}
+                            isAuthenticated={isAuthenticated}
+                            onOpenAuthModal={openAuthModal}
+                            isLoading={isLoadingBookmarks}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/submit"
+                        element={
+                          <SubmitNewsScreen
+                            onBack={() => navigate(-1)}
+                            onSubmitSuccess={handleNewCitizenSubmission}
+                            categories={categories}
+                            districts={districts}
+                            locations={locations}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/profile"
+                        element={
+                          <ReporterScreen
+                            onOpenSubmitNews={(resubmitFrom) =>
+                              navigate('/submit', { state: { resubmitFrom } })
+                            }
+                            submissions={submissions}
+                            onOpenAdmin={() => navigate('/admin')}
+                            districts={districts}
+                            locations={locations}
+                            categories={categories}
+                            savedCount={savedNewsIds.length}
+                            unreadCount={unreadNotificationsCount}
+                            onOpenNotifications={() => setIsNotificationsOpen(true)}
+                            onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                            onNavigateToSaved={() => navigate('/saved')}
+                          />
+                        }
+                      />
+                      <Route path="*" element={<NotFoundScreen />} />
+                    </Routes>
+                  </React.Suspense>
+                </ErrorBoundary>
+              </main>
 
-                {/* Screen Content Routes */}
-                <main>
-                  <Routes>
-                    <Route
-                      path="/"
-                      element={
-                        <HomeScreen
-                          newsList={newsList}
-                          breakingNews={breakingNewsItem}
-                          onSelectNews={(n) => navigate(`/news/${n.id}`)}
-                          onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
-                          savedNewsIds={savedNewsIds}
-                          onToggleSave={handleToggleSave}
-                          onShare={handleShare}
-                          onOpenFlipMode={() => setIsFlipReaderOpen(true)}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/category/:slug"
-                      element={
-                        <HomeScreen
-                          newsList={newsList}
-                          breakingNews={breakingNewsItem}
-                          onSelectNews={(n) => navigate(`/news/${n.id}`)}
-                          onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
-                          savedNewsIds={savedNewsIds}
-                          onToggleSave={handleToggleSave}
-                          onShare={handleShare}
-                          onOpenFlipMode={() => setIsFlipReaderOpen(true)}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/location/:slug"
-                      element={
-                        <HomeScreen
-                          newsList={newsList}
-                          breakingNews={breakingNewsItem}
-                          onSelectNews={(n) => navigate(`/news/${n.id}`)}
-                          onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
-                          savedNewsIds={savedNewsIds}
-                          onToggleSave={handleToggleSave}
-                          onShare={handleShare}
-                          onOpenFlipMode={() => setIsFlipReaderOpen(true)}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/news/:id"
-                      element={
-                        <NewsDetailScreen
-                          newsList={newsList}
-                          onBack={() => navigate(-1)}
-                          onOpenVoicePlayer={(n) => navigate(`/voice/${n.id}`)}
-                          onSelectRelatedNews={(n) => navigate(`/news/${n.id}`)}
-                          isSaved={false}
-                          onToggleSave={handleToggleSave}
-                          onOpenComments={(id) => setCommentingNewsId(id)}
-                          onShare={handleShare}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/voice"
-                      element={
-                        <VoicePlayerScreen
-                          newsList={newsList}
-                          onBack={() => navigate(-1)}
-                          onShare={handleShare}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/voice/:id"
-                      element={
-                        <VoicePlayerScreen
-                          newsList={newsList}
-                          onBack={() => navigate(-1)}
-                          onShare={handleShare}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/video"
-                      element={
-                        <VideoScreen
-                          newsList={newsList}
-                          onSelectNews={(n) => navigate(`/news/${n.id}`)}
-                          onShare={handleShare}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/saved"
-                      element={
-                        <SavedScreen
-                          savedNews={savedNewsItems}
-                          onSelectNews={(n) => navigate(`/news/${n.id}`)}
-                          onPlayVoice={(n) => navigate(`/voice/${n.id}`)}
-                          onToggleSave={handleToggleSave}
-                          onShare={handleShare}
-                          onExploreNews={() => navigate('/')}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/submit"
-                      element={
-                        <SubmitNewsScreen
-                          onBack={() => navigate(-1)}
-                          onSubmitSuccess={handleNewCitizenSubmission}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/profile"
-                      element={
-                        <ReporterScreen
-                          onOpenSubmitNews={() => navigate('/submit')}
-                          submissions={submissions}
-                          onOpenAdmin={() => navigate('/admin')}
-                        />
-                      }
-                    />
-                    <Route path="*" element={<NotFoundScreen />} />
-                  </Routes>
-                </main>
-
-                {/* Bottom Navigation */}
-                {!hideBottomNav && (
-                  <BottomNav savedCount={savedNewsIds.length} />
-                )}
-              </div>
+              {/* Bottom Navigation (Mobile Only) */}
+              {!hideBottomNav && (
+                <BottomNav savedCount={savedNewsIds.length} />
+              )}
             </div>
           }
         />
@@ -463,61 +637,100 @@ export default function App() {
 
       {/* 60-Word Rachabanda Card Reader Overlay */}
       {isFlipReaderOpen && (
-        <Way2NewsFlipView
-          newsList={newsList}
-          onClose={() => setIsFlipReaderOpen(false)}
-          onSelectDetail={(n) => {
-            setIsFlipReaderOpen(false);
-            navigate(`/news/${n.id}`);
-          }}
-          onShare={handleShare}
-        />
+        <ErrorBoundary fallbackTitle="ఫ్లిప్ రీడర్ లోడ్ చేయడంలో లోపం (Flip Reader Error)">
+          <React.Suspense
+            fallback={
+              <LoadingFallback
+                fullScreen
+                label="ఫ్లిప్ రీడర్ లోడ్ అవుతోంది... (Loading Flip Reader...)"
+              />
+            }
+          >
+            <Way2NewsFlipView
+              newsList={newsList}
+              onClose={() => setIsFlipReaderOpen(false)}
+              onSelectDetail={(n) => {
+                setIsFlipReaderOpen(false);
+                navigate(`/news/${n.id}`);
+              }}
+              onShare={handleShare}
+            />
+          </React.Suspense>
+        </ErrorBoundary>
       )}
 
       {/* Comments Drawer */}
       {commentingNewsId && (
-        <CommentsDrawer
-          newsId={commentingNewsId}
-          newsTitle={
-            newsList.find((n) => n.id === commentingNewsId)?.title || ''
-          }
-          comments={comments}
-          onClose={() => setCommentingNewsId(null)}
-          onAddComment={handleAddComment}
-        />
+        <ErrorBoundary fallbackTitle="వ్యాఖ్యల విభాగం లోడ్ చేయడంలో లోపం (Comments Error)">
+          <React.Suspense fallback={<LoadingFallback label="వ్యాఖ్యలు లోడ్ అవుతున్నాయి... (Loading Comments...)" />}>
+            <CommentsDrawer
+              newsId={commentingNewsId}
+              newsTitle={
+                newsList.find((n) => n.id === commentingNewsId)?.title || ''
+              }
+              onClose={() => setCommentingNewsId(null)}
+              onCommentCountChange={handleCommentCountChange}
+            />
+          </React.Suspense>
+        </ErrorBoundary>
       )}
 
       {/* Notifications Drawer */}
       {isNotificationsOpen && (
-        <NotificationsDrawer
-          notifications={newsList.filter((n) => n.isBreaking || n.factChecked)}
-          onClose={() => setIsNotificationsOpen(false)}
-          onSelectNews={(n) => {
-            setIsNotificationsOpen(false);
-            navigate(`/news/${n.id}`);
-          }}
-        />
+        <ErrorBoundary fallbackTitle="నోటిఫికేషన్లు లోడ్ చేయడంలో లోపం (Notifications Error)">
+          <React.Suspense fallback={<LoadingFallback label="నోటిఫికేషన్లు లోడ్ అవుతున్నాయి... (Loading Notifications...)" />}>
+            <NotificationsDrawer
+              onClose={() => setIsNotificationsOpen(false)}
+              onSelectNotificationLink={(link) => {
+                setIsNotificationsOpen(false);
+                navigate(link);
+              }}
+              onNotificationsChange={async () => {
+                const count = await getUnreadNotificationCount();
+                setUnreadNotificationsCount(count);
+              }}
+            />
+          </React.Suspense>
+        </ErrorBoundary>
       )}
 
       {/* Search Modal */}
       {isSearchOpen && (
-        <SearchModal
-          newsList={newsList}
-          onClose={() => setIsSearchOpen(false)}
-          onSelectNews={(n) => {
-            setIsSearchOpen(false);
-            navigate(`/news/${n.id}`);
-          }}
-        />
+        <ErrorBoundary fallbackTitle="శోధన విభాగం లోడ్ చేయడంలో లోపం (Search Error)">
+          <React.Suspense fallback={<LoadingFallback label="శోధన సిద్ధమవుతోంది... (Loading Search...)" />}>
+            <SearchModal
+              newsList={newsList}
+              onClose={() => setIsSearchOpen(false)}
+              onSelectNews={(n) => {
+                setIsSearchOpen(false);
+                navigate(`/news/${n.id}`);
+              }}
+            />
+          </React.Suspense>
+        </ErrorBoundary>
       )}
 
       {/* Floating Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-neutral-900/95 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-2xl border border-neutral-700 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-          <Check className="w-4 h-4 text-emerald-400" />
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-neutral-900/95 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-2xl border border-neutral-700 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2"
+        >
+          <Check className="w-4 h-4 text-emerald-400" aria-hidden="true" />
           <span>{toastMessage}</span>
         </div>
       )}
     </div>
   );
 }
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+      <AuthModal />
+    </AuthProvider>
+  );
+}
+

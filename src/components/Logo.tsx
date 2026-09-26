@@ -33,6 +33,7 @@ export const Logo: React.FC<LogoProps> = ({
             viewBox="0 0 24 24"
             className="w-5 h-5 text-[#E41E26]"
             fill="currentColor"
+            aria-hidden="true"
           >
             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
             <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
@@ -67,6 +68,7 @@ export const Logo: React.FC<LogoProps> = ({
             viewBox="0 0 24 24"
             className="w-6 h-6 text-white"
             fill="currentColor"
+            aria-hidden="true"
           >
             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
             <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
@@ -99,6 +101,7 @@ export const Logo: React.FC<LogoProps> = ({
               viewBox="0 0 24 24"
               className="w-9 h-9 text-white drop-shadow-md"
               fill="currentColor"
+              aria-hidden="true"
             >
               <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
               <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
@@ -106,9 +109,9 @@ export const Logo: React.FC<LogoProps> = ({
           </div>
 
           <div className="flex flex-col text-left">
-            <h1 className="text-3xl font-black tracking-tight text-[#111111] telugu-heading leading-none">
+            <span className="text-3xl font-black tracking-tight text-[#111111] telugu-heading leading-none">
               రచ్చ బండ
-            </h1>
+            </span>
             <div className="inline-flex items-center gap-1.5 mt-1 bg-[#E41E26] text-white px-2 py-0.5 rounded text-xs font-bold tracking-widest uppercase">
               <span>— VOICE</span>
             </div>
@@ -134,7 +137,7 @@ export const Logo: React.FC<LogoProps> = ({
     return (
       <div className={`flex items-center gap-2.5 ${className}`}>
         <div className="w-8 h-8 rounded-full bg-[#E41E26] flex items-center justify-center flex-shrink-0">
-          <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor">
+          <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor" aria-hidden="true">
             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
             <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
           </svg>

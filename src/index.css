@@ -13,6 +13,12 @@
   h1, h2, h3, .telugu-heading {
     font-family: 'Ramabhadra', 'Noto Sans Telugu', sans-serif;
   }
+
+  /* Accessible focus indicators for keyboard navigation */
+  :focus-visible {
+    outline: 2px solid #E41E26;
+    outline-offset: 2px;
+  }
 }
 
 /* Custom scrollbar for news categories and lists */

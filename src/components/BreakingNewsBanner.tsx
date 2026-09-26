@@ -3,7 +3,7 @@ import { NewsItem } from '../types';
 import { ChevronRight, Volume2 } from 'lucide-react';
 
 interface BreakingNewsBannerProps {
-  news: NewsItem;
+  news?: NewsItem;
   onSelectNews: (news: NewsItem) => void;
   onPlayVoice: (news: NewsItem, e: React.MouseEvent) => void;
   onViewAllBreaking?: () => void;
@@ -15,6 +15,8 @@ export const BreakingNewsBanner: React.FC<BreakingNewsBannerProps> = ({
   onPlayVoice,
   onViewAllBreaking,
 }) => {
+  if (!news) return null;
+
   return (
     <div className="px-3 pt-3 pb-1 bg-[#F8F9FA]">
       {/* Header with red pulse & 'మరిన్ని >' */}
@@ -27,18 +29,27 @@ export const BreakingNewsBanner: React.FC<BreakingNewsBannerProps> = ({
         </div>
         <button
           onClick={onViewAllBreaking}
-          className="text-xs font-semibold text-neutral-500 hover:text-[#E41E26] flex items-center gap-0.5 transition-colors"
+          aria-label="మరిన్ని బ్రేకింగ్ వార్తలు చూడండి"
+          className="text-xs font-semibold text-neutral-600 hover:text-[#E41E26] flex items-center gap-0.5 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] rounded-sm"
         >
           <span>మరిన్ని</span>
-          <ChevronRight className="w-3.5 h-3.5" />
+          <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       </div>
 
       {/* Breaking News Card */}
       <div
         id={`breaking-card-${news.id}`}
+        role="article"
+        tabIndex={0}
         onClick={() => onSelectNews(news)}
-        className="bg-white rounded-xl overflow-hidden border border-neutral-200/80 shadow-xs cursor-pointer hover:shadow-md transition-all active:scale-[0.99] flex flex-col sm:flex-row"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelectNews(news);
+          }
+        }}
+        className="bg-white rounded-xl overflow-hidden border border-neutral-200/80 shadow-xs cursor-pointer hover:shadow-md transition-all active:scale-[0.99] flex flex-col sm:flex-row focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26]"
       >
         <div className="relative sm:w-2/5 h-44 sm:h-auto overflow-hidden">
           <img
@@ -65,7 +76,7 @@ export const BreakingNewsBanner: React.FC<BreakingNewsBannerProps> = ({
           </div>
 
           <div className="mt-3 pt-2.5 border-t border-neutral-100 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
+            <div className="flex items-center gap-1.5 text-xs text-neutral-700 font-medium">
               <span>👤 {news.reporterName}</span>
             </div>
 
@@ -73,9 +84,10 @@ export const BreakingNewsBanner: React.FC<BreakingNewsBannerProps> = ({
             <button
               id={`listen-breaking-${news.id}`}
               onClick={(e) => onPlayVoice(news, e)}
-              className="flex items-center gap-1.5 bg-red-50 text-[#E41E26] hover:bg-[#E41E26] hover:text-white px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs active:scale-95"
+              aria-label={`వాయిస్ బులెటిన్ వినండి: ${news.title}`}
+              className="flex items-center gap-1.5 bg-red-50 text-[#E41E26] hover:bg-[#E41E26] hover:text-white px-3 py-1 rounded-full text-xs font-bold transition-all shadow-2xs active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26]"
             >
-              <Volume2 className="w-3.5 h-3.5" />
+              <Volume2 className="w-3.5 h-3.5" aria-hidden="true" />
               <span>వినండి</span>
             </button>
           </div>

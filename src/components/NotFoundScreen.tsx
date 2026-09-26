@@ -27,17 +27,19 @@ export const NotFoundScreen: React.FC = () => {
       <div className="mt-6 flex flex-col sm:flex-row items-center gap-3">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-4 py-2 bg-neutral-200 hover:bg-neutral-300 text-neutral-800 rounded-xl text-xs font-bold transition-all"
+          aria-label="మునుపటి పేజీకి వెనుకకు వెళ్లండి"
+          className="flex items-center gap-2 px-4 py-2 bg-neutral-200 hover:bg-neutral-300 text-neutral-800 rounded-xl text-xs font-bold transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-neutral-600"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
           <span>వెనుకకు వెళ్లండి</span>
         </button>
 
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#E41E26] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all"
+          aria-label="హోమ్ పేజీకి వెళ్లండి"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#E41E26] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26]"
         >
-          <Home className="w-4 h-4" />
+          <Home className="w-4 h-4" aria-hidden="true" />
           <span>హోమ్‌కి వెళ్లండి</span>
         </button>
       </div>

@@ -37,13 +37,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-neutral-200/80 shadow-lg select-none">
+    <nav aria-label="మొబైల్ నావిగేషన్ (Mobile Navigation)" className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-neutral-200/80 shadow-lg select-none md:hidden">
       <div className="max-w-md mx-auto flex items-center justify-around h-15 px-2 relative">
         {/* 1. హోం (Home) */}
         <button
           id="nav-home"
           onClick={() => handleNav('home', '/')}
-          className={`flex flex-col items-center justify-center flex-1 h-full transition-colors active:scale-95 ${
+          aria-current={currentTab === 'home' ? 'page' : undefined}
+          className={`flex flex-col items-center justify-center flex-1 h-full transition-colors active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] rounded-lg ${
             currentTab === 'home' ? 'text-[#E41E26]' : 'text-neutral-500 hover:text-neutral-800'
           }`}
         >
@@ -55,7 +56,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <button
           id="nav-video"
           onClick={() => handleNav('video', '/video')}
-          className={`flex flex-col items-center justify-center flex-1 h-full transition-colors active:scale-95 ${
+          aria-current={currentTab === 'video' ? 'page' : undefined}
+          className={`flex flex-col items-center justify-center flex-1 h-full transition-colors active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] rounded-lg ${
             currentTab === 'video' ? 'text-[#E41E26]' : 'text-neutral-500 hover:text-neutral-800'
           }`}
         >
@@ -68,7 +70,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <button
             id="nav-submit-news-mic"
             onClick={() => handleNav('submit', '/submit')}
-            className={`w-13 h-13 rounded-full bg-gradient-to-tr from-[#B71C1C] to-[#E41E26] text-white flex flex-col items-center justify-center shadow-lg hover:shadow-xl active:scale-90 transition-transform border-4 border-white ${
+            aria-label="మీ వార్త పంపండి (Submit News)"
+            aria-current={currentTab === 'submit' ? 'page' : undefined}
+            className={`w-13 h-13 rounded-full bg-gradient-to-tr from-[#B71C1C] to-[#E41E26] text-white flex flex-col items-center justify-center shadow-lg hover:shadow-xl active:scale-90 transition-transform border-4 border-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] ${
               currentTab === 'submit' ? 'ring-2 ring-[#E41E26]' : ''
             }`}
             title="మీ వార్త పంపండి"
@@ -81,7 +85,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <button
           id="nav-saved"
           onClick={() => handleNav('saved', '/saved')}
-          className={`relative flex flex-col items-center justify-center flex-1 h-full transition-colors active:scale-95 ${
+          aria-current={currentTab === 'saved' ? 'page' : undefined}
+          className={`relative flex flex-col items-center justify-center flex-1 h-full transition-colors active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] rounded-lg ${
             currentTab === 'saved' ? 'text-[#E41E26]' : 'text-neutral-500 hover:text-neutral-800'
           }`}
         >
@@ -98,7 +103,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <button
           id="nav-profile"
           onClick={() => handleNav('profile', '/profile')}
-          className={`flex flex-col items-center justify-center flex-1 h-full transition-colors active:scale-95 ${
+          aria-current={currentTab === 'profile' ? 'page' : undefined}
+          className={`flex flex-col items-center justify-center flex-1 h-full transition-colors active:scale-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] rounded-lg ${
             currentTab === 'profile' ? 'text-[#E41E26]' : 'text-neutral-500 hover:text-neutral-800'
           }`}
         >
