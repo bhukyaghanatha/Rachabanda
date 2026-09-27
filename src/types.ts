@@ -33,6 +33,7 @@ export interface NewsItem {
   audioUrl?: string | null;
   videoUrl?: string | null;
   media?: NewsMediaItem[];
+  language?: string;
 }
 
 export interface CategoryInfo {
@@ -103,7 +104,7 @@ export interface NewsComment {
 }
 
 export type AppViewMode = 'mobile' | 'admin';
-export type MobileTab = 'home' | 'video' | 'submit' | 'saved' | 'profile';
+export type MobileTab = 'home' | 'video' | 'submit' | 'saved' | 'profile' | 'admin';
 export type TopCategoryTab = 'హోం' | 'వీడియో' | 'VOICE' | 'ఫోటోలు' | 'ఫాలో';
 
 // Authentication & User Profile Types

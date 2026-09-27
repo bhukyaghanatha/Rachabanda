@@ -359,6 +359,7 @@ export const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = ({
                 id="delete-account-final-confirm-btn"
                 onClick={handleExecuteDelete}
                 disabled={isDeleting}
+                aria-label="ఖాతాను శాశ్వతంగా తొలగించండి (Delete Account Permanently)"
                 className="px-4 py-2.5 text-xs font-bold text-white bg-red-700 hover:bg-red-800 rounded-xl transition-colors cursor-pointer flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-red-500 shadow-sm disabled:opacity-50"
               >
                 {isDeleting ? (

@@ -48,6 +48,9 @@ const submissionServiceCode = fs.existsSync(submissionServicePath) ? fs.readFile
 const storageServiceCode = fs.existsSync(storageServicePath) ? fs.readFileSync(storageServicePath, 'utf-8') : '';
 const submitNewsScreenCode = fs.existsSync(submitNewsScreenPath) ? fs.readFileSync(submitNewsScreenPath, 'utf-8') : '';
 const reporterScreenCode = fs.existsSync(reporterScreenPath) ? fs.readFileSync(reporterScreenPath, 'utf-8') : '';
+const mySubmissionsScreenPath = path.join(projectRoot, 'src/components/MySubmissionsScreen.tsx');
+const mySubmissionsScreenCode = fs.existsSync(mySubmissionsScreenPath) ? fs.readFileSync(mySubmissionsScreenPath, 'utf-8') : '';
+const submissionsUiCode = reporterScreenCode + '\n' + mySubmissionsScreenCode;
 const adminDashboardCode = fs.existsSync(adminDashboardPath) ? fs.readFileSync(adminDashboardPath, 'utf-8') : '';
 const storageSql = fs.existsSync(storageSetupPath) ? fs.readFileSync(storageSetupPath, 'utf-8') : '';
 const typesCode = fs.existsSync(typesPath) ? fs.readFileSync(typesPath, 'utf-8') : '';
@@ -269,7 +272,7 @@ assert(
 const resubmissionCreatesNew =
   submitNewsScreenCode.includes('createSubmission') &&
   submissionServiceCode.includes("status: 'pending' as const") &&
-  reporterScreenCode.includes("navigate('/submit', { state: { resubmitFrom: sub } })");
+  submissionsUiCode.includes("navigate('/submit', { state: { resubmitFrom: sub } })");
 assert(
   resubmissionCreatesNew,
   16,
@@ -281,7 +284,7 @@ assert(
 // CRITERION 17: REJECTED RECORD IS NOT MUTATED INTO PENDING
 // -----------------------------------------------------------------------------
 const noMutationOfRejected =
-  !reporterScreenCode.includes("update({ status: 'pending' })") &&
+  !submissionsUiCode.includes("update({ status: 'pending' })") &&
   !submissionServiceCode.includes("status = 'pending' WHERE id = rejected");
 assert(
   noMutationOfRejected,
@@ -309,10 +312,10 @@ assert(
 // CRITERION 19: REPORTER SCREEN HAS WITHDRAWAL
 // -----------------------------------------------------------------------------
 const reporterHasWithdrawal =
-  reporterScreenCode.includes('withdrawOwnSubmission') &&
-  reporterScreenCode.includes('withdrawModalSubmission') &&
-  reporterScreenCode.includes('ఉపసంహరించు (Withdraw)') &&
-  reporterScreenCode.includes('వార్త ఉపసంహరణ / Withdraw Submission');
+  submissionsUiCode.includes('withdrawOwnSubmission') &&
+  submissionsUiCode.includes('withdrawModalSubmission') &&
+  submissionsUiCode.includes('ఉపసంహరించు (Withdraw)') &&
+  submissionsUiCode.includes('వార్త ఉపసంహరణ / Withdraw Submission');
 assert(
   reporterHasWithdrawal,
   19,
@@ -324,8 +327,8 @@ assert(
 // CRITERION 20: REPORTER SCREEN HAS REJECTED FILTER
 // -----------------------------------------------------------------------------
 const reporterHasRejectedFilter =
-  reporterScreenCode.includes("setSubmissionFilter('rejected')") &&
-  reporterScreenCode.includes('తిరస్కరించబడింది ({rejectedCount})');
+  submissionsUiCode.includes("setSubmissionFilter('rejected')") &&
+  submissionsUiCode.includes('తిరస్కరించబడింది ({rejectedCount})');
 assert(
   reporterHasRejectedFilter,
   20,
@@ -337,9 +340,9 @@ assert(
 // CRITERION 21: REPORTER SCREEN HAS RESUBMIT
 // -----------------------------------------------------------------------------
 const reporterHasResubmit =
-  reporterScreenCode.includes('handleResubmit') &&
-  reporterScreenCode.includes('resubmitFrom') &&
-  reporterScreenCode.includes('మళ్లీ సమర్పించు (Resubmit)');
+  submissionsUiCode.includes('handleResubmit') &&
+  submissionsUiCode.includes('resubmitFrom') &&
+  submissionsUiCode.includes('మళ్లీ సమర్పించు (Resubmit)');
 assert(
   reporterHasResubmit,
   21,

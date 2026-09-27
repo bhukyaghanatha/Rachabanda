@@ -1,9 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from './Logo';
-import { Search, Bell, Shield, Sparkles, LogIn, LogOut, Plus, Bookmark } from 'lucide-react';
+import { Search, Bell, Shield, Sparkles, LogIn, LogOut, Plus, Bookmark, Globe } from 'lucide-react';
 import { TopCategoryTab } from '../types';
 import { useAuth } from '../hooks/useAuth';
+import { useAppLanguage } from '../i18n';
 
 interface HeaderProps {
   activeTopTab: TopCategoryTab;
@@ -27,7 +28,8 @@ export const Header: React.FC<HeaderProps> = ({
   isFlipMode,
 }) => {
   const navigate = useNavigate();
-  const { profile, isAuthenticated, openAuthModal, signOut } = useAuth();
+  const { profile, isAuthenticated, isAdmin, isEditor, openAuthModal, signOut } = useAuth();
+  const { language, openLanguageSelection, t } = useAppLanguage();
   const topTabs: TopCategoryTab[] = ['హోం', 'వీడియో', 'VOICE', 'ఫోటోలు', 'ఫాలో'];
 
   return (
@@ -82,16 +84,18 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline text-[11px]">ఫ్లిప్ రీడర్</span>
           </button>
 
-          {/* Admin shortcut */}
-          <button
-            id="admin-shortcut-btn"
-            onClick={onSwitchToAdmin}
-            title="అడ్మిన్ డాష్‌బోర్డ్"
-            aria-label="అడ్మిన్ డాష్‌బోర్డ్ (Admin Dashboard)"
-            className="p-1.5 text-white/90 hover:text-white hover:bg-white/15 rounded-full transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white"
-          >
-            <Shield className="w-4 h-4" />
-          </button>
+          {/* Admin shortcut - Only visible to Admins and Editors */}
+          {(isAdmin || isEditor) && (
+            <button
+              id="admin-shortcut-btn"
+              onClick={onSwitchToAdmin}
+              title="అడ్మిన్ డాష్‌బోర్డ్"
+              aria-label="అడ్మిన్ డాష్‌బోర్డ్ (Admin Dashboard)"
+              className="p-1.5 text-white/90 hover:text-white hover:bg-white/15 rounded-full transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <Shield className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Search Button */}
           <button
@@ -120,14 +124,26 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </button>
 
+          {/* Quick App Language Switcher */}
+          <button
+            id="header-lang-toggle-btn"
+            onClick={openLanguageSelection}
+            title="యాప్ భాష / App Language"
+            aria-label="యాప్ భాషను ఎంచుకోండి (Choose App Language)"
+            className="flex items-center gap-1 text-[11px] font-bold bg-white/15 hover:bg-white/25 text-white px-2 py-1 rounded-full transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <Globe className="w-3.5 h-3.5 text-yellow-300" />
+            <span className="uppercase font-mono text-[10px]">{language}</span>
+          </button>
+
           {/* User Auth Section */}
           {isAuthenticated ? (
             <div className="flex items-center gap-1 ml-0.5">
               <button
                 id="header-user-profile-btn"
                 onClick={() => navigate('/profile')}
-                title={`${profile?.full_name || 'యూజర్'} (ప్రొఫైల్)`}
-                aria-label={`${profile?.full_name || 'యూజర్'} ప్రొఫైల్`}
+                title={`${profile?.full_name || 'యూజర్'} (${t('profile.title')})`}
+                aria-label={`${profile?.full_name || 'యూజర్'} ${t('profile.title')}`}
                 className="flex items-center gap-1.5 bg-black/20 hover:bg-black/30 text-white px-2 py-1 rounded-full transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white"
               >
                 {profile?.avatar_url ? (
@@ -148,8 +164,8 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 id="header-logout-btn"
                 onClick={() => signOut()}
-                title="లాగౌట్ / Logout"
-                aria-label="లాగౌట్ (Logout)"
+                title={`${t('common.logout')} / Logout`}
+                aria-label={`${t('common.logout')} / Logout`}
                 className="p-1 text-white/80 hover:text-white hover:bg-white/15 rounded-full transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -159,12 +175,12 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="header-login-btn"
               onClick={openAuthModal}
-              title="లాగిన్ / Login"
-              aria-label="లాగిన్ / Login"
+              title={`${t('common.login')} / Login`}
+              aria-label={`${t('common.login')} / Login`}
               className="flex items-center gap-1 text-[11px] font-bold bg-white text-[#E41E26] hover:bg-neutral-100 active:scale-95 px-2.5 py-1 rounded-full shadow-xs transition-all ml-0.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>లాగిన్</span>
+              <span>{t('common.login')}</span>
             </button>
           )}
         </div>

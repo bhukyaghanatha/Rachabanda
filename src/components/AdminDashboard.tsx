@@ -3096,9 +3096,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               {/* Standard preset reasons */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-neutral-700 telugu-heading">
+                <div className="block text-xs font-bold text-neutral-700 telugu-heading">
                   ప్రామాణిక కారణాలు (Standard Reasons):
-                </label>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {STANDARD_REJECTION_REASONS.map((preset) => (
                     <button

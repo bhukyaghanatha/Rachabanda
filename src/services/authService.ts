@@ -171,6 +171,9 @@ export async function signInWithGoogle(): Promise<{ error: Error | null }> {
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
+        queryParams: {
+          prompt: 'select_account',
+        },
       },
     });
 

@@ -10,6 +10,7 @@ import { NewsCard } from './NewsCard';
 import { DISTRICTS as FALLBACK_DISTRICTS } from '../data/mockNews';
 import {
   Filter,
+  Globe,
   Sparkles,
   Volume2,
   PhoneCall,
@@ -70,6 +71,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [selectedDistrict, setSelectedDistrict] = useState(
     isLocationRoute && slug ? decodeURIComponent(slug) : initialDistrict || 'అన్ని ప్రాంతాలు'
   );
+  // Independent news language filter (All, Telugu, English, Hindi)
+  const [selectedNewsLanguage, setSelectedNewsLanguage] = useState<string>('all');
 
   // Real Supabase User Follows
   const [userFollows, setUserFollows] = useState<FollowItem[]>([]);
@@ -260,7 +263,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         : item.location.includes(selectedDistrict) ||
           (item.locationSlug && item.locationSlug.toLowerCase() === selectedDistrict.toLowerCase());
 
-    return matchesCategory && matchesDistrict;
+    // Independent News Language Filtering (News item language vs App UI language)
+    const matchesNewsLanguage =
+      selectedNewsLanguage === 'all'
+        ? true
+        : (item.language || 'te').toLowerCase() === selectedNewsLanguage.toLowerCase() ||
+          (selectedNewsLanguage === 'te' && (item.language === 'telugu' || item.language === 'te' || !item.language)) ||
+          (selectedNewsLanguage === 'en' && (item.language === 'english' || item.language === 'en')) ||
+          (selectedNewsLanguage === 'hi' && (item.language === 'hindi' || item.language === 'hi'));
+
+    return matchesCategory && matchesDistrict && matchesNewsLanguage;
   });
 
   return (
@@ -295,6 +307,36 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               }`}
             >
               {dist}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 2b. News Language Filter (Completely Independent of App UI Language) */}
+      <div className="px-3 py-1.5 bg-neutral-50/90 border-b border-neutral-200/70 flex items-center gap-2 overflow-x-auto scrollbar-none" role="region" aria-label="వార్తల భాష (News Language Filter)">
+        <span className="text-[11px] font-bold text-neutral-700 flex items-center gap-1 flex-shrink-0">
+          <Globe className="w-3 h-3 text-[#E41E26]" />
+          వార్తల భాష:
+        </span>
+        {[
+          { code: 'all', label: 'All / అన్నీ' },
+          { code: 'te', label: 'తెలుగు' },
+          { code: 'en', label: 'English' },
+          { code: 'hi', label: 'हिंदी' },
+        ].map((lang) => {
+          const isSelected = selectedNewsLanguage === lang.code;
+          return (
+            <button
+              key={lang.code}
+              onClick={() => setSelectedNewsLanguage(lang.code)}
+              aria-pressed={isSelected}
+              className={`px-3 py-0.5 rounded-full text-xs font-bold whitespace-nowrap transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] ${
+                isSelected
+                  ? 'bg-[#E41E26] text-white shadow-xs'
+                  : 'bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-100'
+              }`}
+            >
+              {lang.label}
             </button>
           );
         })}

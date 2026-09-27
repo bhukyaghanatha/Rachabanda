@@ -358,9 +358,9 @@ export const ReportDialog: React.FC<ReportDialogProps> = ({
 
             {/* Instruction */}
             <div>
-              <label className="block text-xs font-bold text-neutral-800 telugu-heading mb-1.5">
+              <div id="report-reason-heading" className="block text-xs font-bold text-neutral-800 telugu-heading mb-1.5">
                 రిపోర్ట్ చేయడానికి కారణాన్ని ఎంచుకోండి <span className="text-red-500">*</span>
-              </label>
+              </div>
               <p className="text-[11px] text-neutral-500 mb-3">
                 కంటెంట్‌లో ఉన్న ప్రధాన సమస్యను సూచించే సరైన కారణాన్ని ఎంచుకోండి.
               </p>
@@ -368,7 +368,7 @@ export const ReportDialog: React.FC<ReportDialogProps> = ({
               {/* Reasons Radio List */}
               <div
                 role="radiogroup"
-                aria-label="రిపోర్ట్ కారణాలు (Report reasons)"
+                aria-labelledby="report-reason-heading"
                 className="space-y-2"
               >
                 {REPORT_REASONS.map((reason) => {
@@ -453,6 +453,7 @@ export const ReportDialog: React.FC<ReportDialogProps> = ({
                 id="report-submit-btn"
                 type="submit"
                 disabled={isSubmitting || !selectedReason}
+                aria-label="రిపోర్ట్ పంపండి (Submit Report)"
                 className="px-5 py-2.5 rounded-xl bg-[#E41E26] hover:bg-[#B71C1C] text-white text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] cursor-pointer"
               >
                 {isSubmitting ? (

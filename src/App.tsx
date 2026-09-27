@@ -35,6 +35,21 @@ const SubmitNewsScreen = React.lazy(() =>
 const ReporterScreen = React.lazy(() =>
   import('./components/ReporterScreen').then((m) => ({ default: m.ReporterScreen }))
 );
+const ProfileDetailsScreen = React.lazy(() =>
+  import('./components/ProfileDetailsScreen').then((m) => ({ default: m.ProfileDetailsScreen }))
+);
+const MySubmissionsScreen = React.lazy(() =>
+  import('./components/MySubmissionsScreen').then((m) => ({ default: m.MySubmissionsScreen }))
+);
+const MyReportsScreen = React.lazy(() =>
+  import('./components/MyReportsScreen').then((m) => ({ default: m.MyReportsScreen }))
+);
+const GuidelinesScreen = React.lazy(() =>
+  import('./components/GuidelinesScreen').then((m) => ({ default: m.GuidelinesScreen }))
+);
+const HelpSupportScreen = React.lazy(() =>
+  import('./components/HelpSupportScreen').then((m) => ({ default: m.HelpSupportScreen }))
+);
 const VideoScreen = React.lazy(() =>
   import('./components/VideoScreen').then((m) => ({ default: m.VideoScreen }))
 );
@@ -54,6 +69,8 @@ const SearchModal = React.lazy(() =>
   import('./components/SearchModal').then((m) => ({ default: m.SearchModal }))
 );
 
+import { LanguageProvider } from './i18n';
+import { LanguageSelectionScreen } from './components/LanguageSelectionScreen';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthModal } from './components/AuthModal';
 
@@ -82,7 +99,7 @@ function AppContent() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Authentication state
-  const { user, profile, isAuthenticated, isAdmin, isEditor, openAuthModal } = useAuth();
+  const { user, profile, isAuthenticated, isAdmin, isEditor, isLoading: isAuthLoading, openAuthModal } = useAuth();
 
   // App Data State: Live Supabase News hook with graceful fallback
   const {
@@ -331,20 +348,22 @@ function AppContent() {
             <span>న్యూస్ పోర్టల్</span>
           </button>
 
-          {/* Admin Panel Dashboard Button */}
-          <button
-            id="switch-view-admin-btn"
-            onClick={() => navigate('/admin')}
-            aria-label="అడ్మిన్ డ్యాష్‌బోర్డ్‌కి మారండి"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] ${
-              isAdminRoute
-                ? 'bg-[#E41E26] text-white shadow-md'
-                : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>అడ్మిన్ డ్యాష్‌బోర్డ్</span>
-          </button>
+          {/* Admin Panel Dashboard Button - Only visible to Admins/Editors */}
+          {(isAdmin || isEditor) && (
+            <button
+              id="switch-view-admin-btn"
+              onClick={() => navigate('/admin')}
+              aria-label="అడ్మిన్ డ్యాష్‌బోర్డ్‌కి మారండి"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E41E26] ${
+                isAdminRoute
+                  ? 'bg-[#E41E26] text-white shadow-md'
+                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>అడ్మిన్ డ్యాష్‌బోర్డ్</span>
+            </button>
+          )}
 
           {/* Flip Mode shortcut */}
           <button
@@ -366,7 +385,12 @@ function AppContent() {
         <Route
           path="/admin"
           element={
-            !isAuthenticated ? (
+            isAuthLoading ? (
+              <LoadingFallback
+                fullScreen
+                label="అధికారాల పరిశీలన జరుగుతోంది... (Verifying permissions...)"
+              />
+            ) : !isAuthenticated ? (
               <div className="min-h-[calc(100vh-42px)] bg-neutral-900 flex items-center justify-center p-4">
                 <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-8 max-w-md w-full text-center text-white shadow-2xl">
                   <div className="w-16 h-16 rounded-full bg-red-500/10 text-[#E41E26] flex items-center justify-center mx-auto mb-4 border border-red-500/20">
@@ -600,8 +624,9 @@ function AppContent() {
                           />
                         }
                       />
+                      {/* Dashboard Overview Hub */}
                       <Route
-                        path="/profile"
+                        path="/dashboard"
                         element={
                           <ReporterScreen
                             onOpenSubmitNews={(resubmitFrom) =>
@@ -619,6 +644,57 @@ function AppContent() {
                             onNavigateToSaved={() => navigate('/saved')}
                           />
                         }
+                      />
+                      {/* Legacy reporter route alias */}
+                      <Route
+                        path="/reporter"
+                        element={
+                          <ReporterScreen
+                            onOpenSubmitNews={(resubmitFrom) =>
+                              navigate('/submit', { state: { resubmitFrom } })
+                            }
+                            submissions={submissions}
+                            onOpenAdmin={() => navigate('/admin')}
+                            districts={districts}
+                            locations={locations}
+                            categories={categories}
+                            savedCount={savedNewsIds.length}
+                            unreadCount={unreadNotificationsCount}
+                            onOpenNotifications={() => setIsNotificationsOpen(true)}
+                            onSelectNews={(n) => navigate(`/news/${n.id}`)}
+                            onNavigateToSaved={() => navigate('/saved')}
+                          />
+                        }
+                      />
+                      {/* Dedicated My Profile Page */}
+                      <Route
+                        path="/profile"
+                        element={
+                          <ProfileDetailsScreen
+                            districts={districts}
+                            locations={locations}
+                          />
+                        }
+                      />
+                      {/* Dedicated My Submissions Page */}
+                      <Route
+                        path="/my-submissions"
+                        element={<MySubmissionsScreen />}
+                      />
+                      {/* Dedicated My Reports Page */}
+                      <Route
+                        path="/my-reports"
+                        element={<MyReportsScreen />}
+                      />
+                      {/* Dedicated Reporter Guidelines Page */}
+                      <Route
+                        path="/guidelines"
+                        element={<GuidelinesScreen />}
+                      />
+                      {/* Dedicated Help & Support Page */}
+                      <Route
+                        path="/help"
+                        element={<HelpSupportScreen />}
                       />
                       <Route path="*" element={<NotFoundScreen />} />
                     </Routes>
@@ -727,10 +803,13 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-      <AuthModal />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <AppContent />
+        <AuthModal />
+        <LanguageSelectionScreen />
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

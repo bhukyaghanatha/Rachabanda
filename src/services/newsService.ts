@@ -157,6 +157,7 @@ export function mapDatabaseNewsToNewsItem(row: any): NewsItem {
     audioUrl: row.audio_url || null,
     videoUrl: row.video_url || null,
     media: mediaItems,
+    language: row.language || 'te',
   };
 }
 

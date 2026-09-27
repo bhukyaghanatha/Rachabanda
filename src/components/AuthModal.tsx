@@ -5,8 +5,10 @@
  */
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { getFriendlyAuthErrorMessage } from '../services/authService';
+import { getFriendlyAuthErrorMessage, getCurrentUser, getUserProfile } from '../services/authService';
+import { useAppLanguage } from '../i18n';
 import {
   X,
   Mail,
@@ -18,6 +20,7 @@ import {
   Loader2,
   ShieldCheck,
   CheckCircle,
+  LayoutDashboard,
 } from 'lucide-react';
 
 interface AuthModalProps {
@@ -42,6 +45,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const isOpen = propIsOpen !== undefined ? propIsOpen : isAuthModalOpen;
   const handleClose = propOnClose || closeAuthModal;
+  const navigate = useNavigate();
+  const { t } = useAppLanguage();
 
   const [mode, setMode] = useState<'login' | 'signup'>(defaultMode);
   const [fullName, setFullName] = useState('');
@@ -51,6 +56,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [adminLoginDetected, setAdminLoginDetected] = useState(false);
 
   if (!isOpen) return null;
 
@@ -58,6 +64,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setPassword('');
     setErrorMessage(null);
     setSuccessMessage(null);
+    setAdminLoginDetected(false);
   };
 
   const switchMode = (newMode: 'login' | 'signup') => {
@@ -95,11 +102,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         if (error) {
           setErrorMessage(getFriendlyAuthErrorMessage(error));
         } else {
-          setSuccessMessage('విజయవంతంగా లాగిన్ అయ్యారు! / Logged in successfully!');
-          setTimeout(() => {
-            handleClose();
-            resetForm();
-          }, 600);
+          // Check if logged-in user has admin or editor role
+          const currentUser = await getCurrentUser();
+          let isStaffUser = false;
+          if (currentUser?.id) {
+            const userProfile = await getUserProfile(currentUser.id);
+            isStaffUser = userProfile?.role === 'admin' || userProfile?.role === 'editor';
+          }
+
+          if (isStaffUser) {
+            setAdminLoginDetected(true);
+            setSuccessMessage('అడ్మిన్ ఖాతాతో విజయవంతంగా లాగిన్ అయ్యారు! / Logged in successfully as Admin!');
+          } else {
+            setSuccessMessage('విజయవంతంగా లాగిన్ అయ్యారు! / Logged in successfully!');
+            setTimeout(() => {
+              handleClose();
+              resetForm();
+            }, 600);
+          }
         }
       } else {
         const { error } = await signUpWithEmail(email, password, fullName);
@@ -184,37 +204,85 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
-        {/* Tab Toggle */}
-        <div role="tablist" aria-label="ఖాతా విధానం (Auth mode)" className="flex border-b border-neutral-200 bg-neutral-50/70 p-1.5 m-5 mb-4 rounded-2xl">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'login'}
-            onClick={() => switchMode('login')}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-red-400 ${
-              mode === 'login'
-                ? 'bg-white text-[#E41E26] shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            లాగిన్ / Login
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'signup'}
-            onClick={() => switchMode('signup')}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-red-400 ${
-              mode === 'signup'
-                ? 'bg-white text-[#E41E26] shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            రిజిస్ట్రేషన్ / Sign Up
-          </button>
-        </div>
+        {/* Tab Toggle (Hidden during admin post-login choice) */}
+        {!adminLoginDetected && (
+          <div role="tablist" aria-label="ఖాతా విధానం (Auth mode)" className="flex border-b border-neutral-200 bg-neutral-50/70 p-1.5 m-5 mb-4 rounded-2xl">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'login'}
+              onClick={() => switchMode('login')}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-red-400 ${
+                mode === 'login'
+                  ? 'bg-white text-[#E41E26] shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              {t('common.login')}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'signup'}
+              onClick={() => switchMode('signup')}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-red-400 ${
+                mode === 'signup'
+                  ? 'bg-white text-[#E41E26] shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              {t('common.register')}
+            </button>
+          </div>
+        )}
 
-        <div className="px-6 pb-6 space-y-4">
+        {adminLoginDetected ? (
+          <div className="p-6 text-center space-y-4 animate-in fade-in">
+            <div className="w-14 h-14 rounded-2xl bg-red-100 text-[#E41E26] mx-auto flex items-center justify-center shadow-inner">
+              <LayoutDashboard className="w-7 h-7" aria-hidden="true" />
+            </div>
+            <div>
+              <h3 className="text-base font-black telugu-heading text-neutral-900">
+                అడ్మిన్ లాగిన్ విజయవంతమైంది (Admin Logged In)
+              </h3>
+              <p className="text-xs text-neutral-600 mt-1">
+                మీరు అడ్మిన్ డ్యాష్‌బోర్డ్‌కి వెళ్లాలనుకుంటున్నారా లేదా ప్రస్తుత పేజీలోనే కొనసాగాలనుకుంటున్నారా?
+              </p>
+              <p className="text-[11px] text-neutral-400 mt-0.5">
+                Would you like to go to the Admin Dashboard or continue on the current page?
+              </p>
+            </div>
+            <div className="flex flex-col gap-2.5 pt-2">
+              <button
+                id="auth-go-to-admin-btn"
+                type="button"
+                onClick={() => {
+                  setAdminLoginDetected(false);
+                  resetForm();
+                  handleClose();
+                  navigate('/admin');
+                }}
+                className="w-full py-3 bg-[#E41E26] hover:bg-[#B71C1C] active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-red-400"
+              >
+                <LayoutDashboard className="w-4 h-4" aria-hidden="true" />
+                <span>అడ్మిన్ డ్యాష్‌బోర్డ్ తెరవండి (Go to Admin Dashboard)</span>
+              </button>
+              <button
+                id="auth-stay-here-btn"
+                type="button"
+                onClick={() => {
+                  setAdminLoginDetected(false);
+                  resetForm();
+                  handleClose();
+                }}
+                className="w-full py-2.5 bg-neutral-100 hover:bg-neutral-200 active:scale-[0.98] text-neutral-700 text-xs font-bold rounded-xl transition-all cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-neutral-400"
+              >
+                <span>ఇక్కడే కొనసాగండి (Continue Browsing)</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="px-6 pb-6 space-y-4">
           {/* Google 1-Click Button */}
           <button
             type="button"
@@ -241,7 +309,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span>Google తో కొనసాగండి / Continue with Google</span>
+            <span>{t('auth.googleContinue')}</span>
           </button>
 
           {/* Divider */}
@@ -272,7 +340,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {mode === 'signup' && (
               <div>
                 <label htmlFor="auth-full-name-input" className="block text-[11px] font-bold text-neutral-700 mb-1">
-                  పూర్తి పేరు / Full Name
+                  {t('profile.fullName')}
                 </label>
                 <div className="relative">
                   <UserIcon className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -291,7 +359,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <div>
               <label htmlFor="auth-email-input" className="block text-[11px] font-bold text-neutral-700 mb-1">
-                ఇమెయిల్ / Email Address
+                {t('auth.email')}
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -309,7 +377,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <div>
               <label htmlFor="auth-password-input" className="block text-[11px] font-bold text-neutral-700 mb-1">
-                పాస్‌వర్డ్ / Password
+                {t('auth.password')}
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -343,12 +411,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>ప్రాసెస్ అవుతోంది... / Processing...</span>
+                  <span>{t('common.loading')}</span>
                 </>
               ) : mode === 'login' ? (
-                <span>లాగిన్ అవ్వండి / Sign In</span>
+                <span>{t('auth.signIn')}</span>
               ) : (
-                <span>ఖాతా తెరవండి / Create Account</span>
+                <span>{t('auth.signUp')}</span>
               )}
             </button>
           </form>
@@ -357,30 +425,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div className="text-center pt-2">
             {mode === 'login' ? (
               <p className="text-xs text-neutral-600">
-                ఇంకా ఖాతా లేదా?{' '}
+                {t('auth.dontHaveAccount')}{' '}
                 <button
                   type="button"
                   onClick={() => switchMode('signup')}
-                  className="font-bold text-[#E41E26] hover:underline"
+                  className="font-bold text-[#E41E26] hover:underline cursor-pointer"
                 >
-                  రిజిస్టర్ అవ్వండి / Sign Up
+                  {t('common.register')}
                 </button>
               </p>
             ) : (
               <p className="text-xs text-neutral-600">
-                ఇప్పటికే ఖాతా ఉందా?{' '}
+                {t('auth.alreadyHaveAccount')}{' '}
                 <button
                   type="button"
                   onClick={() => switchMode('login')}
-                  className="font-bold text-[#E41E26] hover:underline"
+                  className="font-bold text-[#E41E26] hover:underline cursor-pointer"
                 >
-                  లాగిన్ అవ్వండి / Sign In
+                  {t('common.login')}
                 </button>
               </p>
             )}
           </div>
         </div>
-      </div>
+      )}
     </div>
-  );
+  </div>
+);
 };

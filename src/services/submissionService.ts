@@ -196,6 +196,11 @@ export async function fetchMySubmissions(
 }
 
 /**
+ * Backward compatibility alias for fetchMySubmissions.
+ */
+export const fetchUserSubmissions = fetchMySubmissions;
+
+/**
  * Editorial Approval Workflow:
  * 1. Verifies the submission exists and is in 'pending' status.
  * 2. Creates a published news record in `public.news`.
